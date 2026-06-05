@@ -14,6 +14,8 @@ const ALLOWED_ORIGINS = [
   'http://localhost:4173',
   'https://dealtracker.vercel.app',
   SUPABASE_URL,
+  'http://dealtracke.netlify.app',
+  'https://dealtracke.netlify.app',
 ]
 
 function corsHeaders(origin: string | null): Record<string, string> {
