@@ -1,0 +1,222 @@
+/* ===== Dashboard Styles ===== */
+.dashboard-wrapper {
+  position: relative;
+}
+
+.dashboard-hero-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 320px;
+  background: linear-gradient(180deg, rgba(0, 212, 170, 0.04) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.dashboard-header {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 40px;
+}
+
+.dashboard-greeting {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 800;
+  margin-bottom: 4px;
+  letter-spacing: -0.02em;
+  color: var(--text-white);
+}
+
+.dashboard-role {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.create-deal-btn {
+  box-shadow: 0 4px 20px rgba(0, 212, 170, 0.2);
+}
+
+/* Dashboard Stats */
+.dashboard-stats {
+  position: relative;
+  z-index: 2;
+}
+
+.stat-accent {
+  border-color: rgba(0, 212, 170, 0.3);
+  background: linear-gradient(135deg, rgba(17, 26, 46, 1) 0%, rgba(15, 30, 40, 1) 100%);
+}
+
+.stat-accent::after {
+  opacity: 1;
+}
+
+.stat-wide {
+  grid-column: span 2;
+}
+
+/* Payout Card */
+.payout-card {
+  margin-bottom: 40px;
+  position: relative;
+  z-index: 2;
+}
+
+.payout-card-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.payout-icon-wrap {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--color-info);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.payout-card-title h3 {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-white);
+  margin-bottom: 4px;
+}
+
+.payout-card-title p {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.payout-configured {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.configured-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.network-badge {
+  background: var(--accent-gradient);
+  color: var(--text-inverse);
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.phone-number {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-white);
+  letter-spacing: 1px;
+}
+
+.payout-form {
+  background: var(--bg-secondary);
+  padding: 20px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  margin-top: 16px;
+}
+
+.payout-row {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.payout-network {
+  width: 200px;
+}
+
+.payout-phone {
+  flex: 1;
+}
+
+.payout-save-btn {
+  min-width: 140px;
+}
+
+/* Dashboard Content */
+.dashboard-content {
+  position: relative;
+  z-index: 2;
+}
+
+.content-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.content-header h2 {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-white);
+}
+
+.deals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+@media (max-width: 900px) {
+  .dashboard-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .stat-wide {
+    grid-column: span 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 20px;
+  }
+  
+  .dashboard-greeting {
+    font-size: 1.5rem;
+  }
+  
+  .payout-row {
+    flex-direction: column;
+  }
+  
+  .payout-network, .payout-phone, .payout-save-btn {
+    width: 100%;
+  }
+
+  .deals-grid {
+    grid-template-columns: 1fr;
+  }
+}

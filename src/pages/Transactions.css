@@ -1,0 +1,72 @@
+/* ===== Transactions ===== */
+.transactions-page {
+  background: var(--bg-primary);
+}
+
+.text-center {
+  text-align: center;
+}
+
+.filter-bar { 
+  display: flex; 
+  gap: 12px; 
+  margin-bottom: 32px; 
+  overflow-x: auto; 
+  padding: 4px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.filter-btn { 
+  display: flex; 
+  align-items: center; 
+  gap: 8px; 
+  padding: 10px 20px; 
+  background: var(--bg-surface); 
+  border: 1px solid var(--border-color); 
+  border-radius: var(--radius-full); 
+  color: var(--text-secondary); 
+  font-size: 0.85rem; 
+  font-weight: 600; 
+  white-space: nowrap; 
+  transition: all var(--transition-fast); 
+  cursor: pointer; 
+}
+
+.filter-btn:hover { 
+  border-color: rgba(0, 212, 170, 0.4); 
+  color: var(--text-primary); 
+  background: rgba(0, 212, 170, 0.04);
+}
+
+.filter-btn.active { 
+  background: rgba(0, 212, 170, 0.1); 
+  border-color: var(--accent-primary); 
+  color: var(--accent-primary); 
+}
+
+.filter-count { 
+  background: rgba(99, 120, 150, 0.15); 
+  padding: 2px 8px; 
+  border-radius: var(--radius-full); 
+  font-size: 0.72rem; 
+  font-weight: 700; 
+  color: var(--text-muted);
+}
+
+.filter-btn.active .filter-count { 
+  background: rgba(0, 212, 170, 0.2); 
+  color: var(--accent-primary);
+}
+
+@media (max-width: 768px) {
+  .filter-bar {
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    padding-bottom: 8px;
+    margin-left: -16px;
+    margin-right: -16px;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
