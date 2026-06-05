@@ -24,7 +24,7 @@ export default function Landing() {
             <span className="gradient-text">Modern Commerce</span>
           </h1>
           <p className="hero-subtitle">
-            Transact with absolute confidence. Our institutional-grade escrow platform 
+            Transact with absolute confidence. Our institutional-grade escrow platform
             protects your funds until both parties are fully satisfied.
           </p>
           <div className="hero-actions">
@@ -49,9 +49,6 @@ export default function Landing() {
             <p>Powered by institutional infrastructure</p>
             <div className="trust-logos">
               <span className="trust-logo">MOOLRE</span>
-              <span className="trust-logo">MTN MOMO</span>
-              <span className="trust-logo">TELECEL</span>
-              <span className="trust-logo">AT</span>
             </div>
           </div>
         </div>
@@ -64,7 +61,7 @@ export default function Landing() {
             <h2 className="section-title">Institutional-Grade Security</h2>
             <p className="section-subtitle">A streamlined, transparent process designed to eliminate transaction risk.</p>
           </div>
-          
+
           <div className="steps-grid">
             <div className="step-card">
               <div className="step-icon-wrap">
@@ -74,11 +71,11 @@ export default function Landing() {
               <h3>Initiate Agreement</h3>
               <p>Create a detailed transaction contract defining terms, conditions, and amounts. Full transparency from day one.</p>
             </div>
-            
+
             <div className="step-connector">
               <div className="connector-line"></div>
             </div>
-            
+
             <div className="step-card">
               <div className="step-icon-wrap">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
@@ -87,11 +84,11 @@ export default function Landing() {
               <h3>Secure Funding</h3>
               <p>Funds are deposited into our audited escrow vault. The seller is instantly notified that capital is secured.</p>
             </div>
-            
+
             <div className="step-connector">
               <div className="connector-line"></div>
             </div>
-            
+
             <div className="step-card">
               <div className="step-icon-wrap">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
@@ -111,7 +108,7 @@ export default function Landing() {
             <h2 className="section-title">Built for Reliability</h2>
             <p className="section-subtitle">Advanced infrastructure ensuring every transaction executes flawlessly.</p>
           </div>
-          
+
           <div className="features-grid">
             <div className="feature-card glass-card">
               <div className="feature-icon">🛡️</div>
@@ -171,12 +168,12 @@ export default function Landing() {
           <div className="footer-content">
             <div className="footer-brand">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2L3 7v10l9 5 9-5V7l-9-5z" fill="url(#footer-grad)" opacity="0.9"/>
-                <path d="M12 2L3 7l9 5 9-5-9-5z" fill="url(#footer-grad)" opacity="0.6"/>
+                <path d="M12 2L3 7v10l9 5 9-5V7l-9-5z" fill="url(#footer-grad)" opacity="0.9" />
+                <path d="M12 2L3 7l9 5 9-5-9-5z" fill="url(#footer-grad)" opacity="0.6" />
                 <defs>
                   <linearGradient id="footer-grad" x1="3" y1="2" x2="21" y2="22">
-                    <stop stopColor="#00d4aa"/>
-                    <stop offset="1" stopColor="#00b4d8"/>
+                    <stop stopColor="#00d4aa" />
+                    <stop offset="1" stopColor="#00b4d8" />
                   </linearGradient>
                 </defs>
               </svg>

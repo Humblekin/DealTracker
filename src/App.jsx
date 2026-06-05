@@ -9,6 +9,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import CreateDeal from './pages/CreateDeal';
 import DealDetails from './pages/DealDetails';
+import SharedDeal from './pages/SharedDeal';
 import Transactions from './pages/Transactions';
 import AdminDashboard from './pages/AdminDashboard';
 
@@ -35,6 +36,7 @@ export default function App() {
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/deal/:shareToken" element={<SharedDeal />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/deals/create" element={<ProtectedRoute><CreateDeal /></ProtectedRoute>} />
             <Route path="/deals/:id" element={<ProtectedRoute><DealDetails /></ProtectedRoute>} />

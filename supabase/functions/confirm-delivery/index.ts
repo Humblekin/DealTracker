@@ -8,11 +8,29 @@ const MOOLRE_PRIVATE_KEY = Deno.env.get('MOOLRE_PRIVATE_KEY')!
 const MOOLRE_ACCOUNT_NUMBER = Deno.env.get('MOOLRE_ACCOUNT_NUMBER')!
 const MOOLRE_BASE_URL = Deno.env.get('MOOLRE_BASE_URL') || 'https://api.moolre.com'
 
+const ALLOWED_ORIGINS = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:4173',
+  'https://dealtracker.vercel.app',
+  SUPABASE_URL,
+]
+
+function corsHeaders(origin: string | null): Record<string, string> {
+  const allowed = ALLOWED_ORIGINS.includes(origin || '') ? origin! : ALLOWED_ORIGINS[2]
+  return {
+    'Access-Control-Allow-Origin': allowed,
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Max-Age': '86400',
+    'Content-Type': 'application/json',
+  }
+}
+
 const NETWORK_CHANNEL: Record<string, string> = {
   mtn: '1',
-  telecel: '6',
-  at: '7',
-  airteltigo: '7',
+  vodafone: '6',
+  tigo: '7',
 }
 
 async function sendPayout(
@@ -59,21 +77,17 @@ async function sendPayout(
 }
 
 serve(async (req) => {
+  const origin = req.headers.get('Origin')
+  const cors = corsHeaders(origin)
+
   if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': '*',
-        'Access-Control-Max-Age': '86400',
-      },
-    })
+    return new Response(null, { status: 204, headers: cors })
   }
 
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      headers: cors,
     })
   }
 
@@ -82,7 +96,7 @@ serve(async (req) => {
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        headers: cors,
       })
     }
 
@@ -96,7 +110,7 @@ serve(async (req) => {
     if (userError || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        headers: cors,
       })
     }
 
@@ -104,7 +118,7 @@ serve(async (req) => {
     if (!deal_id) {
       return new Response(JSON.stringify({ error: 'deal_id is required' }), {
         status: 400,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        headers: cors,
       })
     }
 
@@ -117,21 +131,21 @@ serve(async (req) => {
     if (dealError || !deal) {
       return new Response(JSON.stringify({ error: 'Deal not found' }), {
         status: 404,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        headers: cors,
       })
     }
 
     if (deal.buyer_id !== user.id) {
       return new Response(JSON.stringify({ error: 'Only the buyer can confirm delivery' }), {
         status: 403,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        headers: cors,
       })
     }
 
     if (deal.status !== 'IN_ESCROW') {
       return new Response(JSON.stringify({ error: `Deal is in "${deal.status}" status, expected IN_ESCROW` }), {
         status: 400,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        headers: cors,
       })
     }
 
@@ -140,9 +154,11 @@ serve(async (req) => {
         error: 'Seller has not configured payout details. Please contact support.',
       }), {
         status: 400,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        headers: cors,
       })
     }
+
+    await supabase.from('deals').update({ status: 'DELIVERED' }).eq('id', deal_id)
 
     await supabase.from('audit_logs').insert({
       deal_id,
@@ -171,7 +187,7 @@ serve(async (req) => {
       await supabase.from('notifications').insert({
         user_id: deal.buyer_id,
         title: 'Delivery Confirmed',
-        message: `You confirmed delivery for "${deal.title}". The payout will be processed shortly.`,
+        message: `You confirmed delivery. The payout will be processed shortly.`,
         type: 'info',
         deal_id,
       })
@@ -184,7 +200,7 @@ serve(async (req) => {
       const adminNotifs = (admins || []).map(a => ({
         user_id: a.id,
         title: 'Payout Failed',
-        message: `Auto-payout failed for "${deal.title}" (GH₵ ${parseFloat(deal.amount).toFixed(2)}) to ${deal.seller.full_name} (${deal.seller.phone}). Error: ${payoutResult.error}. Manual intervention required.`,
+        message: `Auto-payout failed for deal #${deal_id} (GH₵ ${parseFloat(deal.amount).toFixed(2)}). Manual intervention required.`,
         type: 'payment',
         deal_id,
       }))
@@ -199,7 +215,7 @@ serve(async (req) => {
         message: 'Delivery confirmed! Payout will be processed shortly.',
       }), {
         status: 200,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        headers: cors,
       })
     }
 
@@ -216,7 +232,7 @@ serve(async (req) => {
       {
         user_id: deal.seller_id,
         title: 'Payment Received!',
-        message: `GH₵ ${parseFloat(deal.amount).toFixed(2)} for "${deal.title}" has been sent to your mobile money.`,
+        message: `Funds for "${deal.title}" have been sent to your mobile money.`,
         type: 'payment',
         deal_id,
       },
@@ -234,13 +250,13 @@ serve(async (req) => {
       message: 'Delivery confirmed! Payment has been sent to the seller.',
     }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      headers: cors,
     })
 
   } catch (err) {
     return new Response(JSON.stringify({ error: err instanceof Error ? err.message : 'Internal server error' }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      headers: cors,
     })
   }
 })

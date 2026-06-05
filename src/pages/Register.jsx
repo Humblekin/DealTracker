@@ -16,14 +16,16 @@ export default function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (formData.password.length < 6) { toast.error('Password must be at least 6 characters'); return; }
+    if (formData.password.length < 8) { toast.error('Password must be at least 8 characters'); return; }
+    if (!/[A-Z]/.test(formData.password)) { toast.error('Password must contain an uppercase letter'); return; }
+    if (!/[0-9]/.test(formData.password)) { toast.error('Password must contain a number'); return; }
     if (formData.password !== formData.confirmPassword) { toast.error('Passwords do not match'); return; }
     setLoading(true);
     try {
       await signUp({ email: formData.email, password: formData.password, fullName: formData.fullName, role: formData.role });
       toast.success('Account created successfully');
       navigate('/dashboard');
-    } catch (err) { toast.error(err.message || 'Registration failed'); }
+    } catch (err) { console.error(err); toast.error('Registration failed. Please try again.'); }
     finally { setLoading(false); }
   };
 
@@ -66,7 +68,7 @@ export default function Register() {
             
             <div className="form-group">
               <label className="form-label" htmlFor="reg-password">Password</label>
-              <input id="reg-password" type="password" name="password" className="form-input" placeholder="At least 6 characters" value={formData.password} onChange={handleChange} required minLength={6} />
+              <input id="reg-password" type="password" name="password" className="form-input" placeholder="Min 8 chars, uppercase, number" value={formData.password} onChange={handleChange} required minLength={8} />
             </div>
             
             <div className="form-group">

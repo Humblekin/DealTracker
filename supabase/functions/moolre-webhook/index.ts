@@ -9,17 +9,6 @@ const MOOLRE_ACCOUNT_NUMBER = Deno.env.get('MOOLRE_ACCOUNT_NUMBER')!
 const MOOLRE_BASE_URL = Deno.env.get('MOOLRE_BASE_URL') || 'https://api.moolre.com'
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': '*',
-        'Access-Control-Max-Age': '86400',
-      },
-    })
-  }
-
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
@@ -31,8 +20,6 @@ serve(async (req) => {
     const payload = await req.json()
     const reference = payload.externalref || payload.data?.externalref
     const moolreRef = payload.data?.reference || reference
-
-    console.log('Webhook payload:', JSON.stringify(payload))
 
     if (!reference) {
       return new Response(JSON.stringify({ error: 'Missing reference' }), {
@@ -61,7 +48,6 @@ serve(async (req) => {
       }),
     })
     const verifyData = await verifyRes.json()
-    console.log('Moolre verification:', JSON.stringify(verifyData))
 
     const paymentSuccessful = payload.status === 1 ||
       payload.status === '1' ||
@@ -91,7 +77,7 @@ serve(async (req) => {
     }
 
     const deal = deals[0]
-    if (deal.status !== 'PENDING_PAYMENT') {
+    if (deal.status !== 'AWAITING_PAYMENT') {
       return new Response(JSON.stringify({ received: true, processed: false, reason: `Deal is ${deal.status}` }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },

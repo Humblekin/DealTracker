@@ -15,16 +15,16 @@ Create a `.env` file in the root of your project:
 VITE_SUPABASE_URL=your_supabase_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 VITE_MOOLRE_PUBLIC_KEY=your_moolre_public_key
-VITE_MOOLRE_ACCOUNT_NUMBER=your_moolre_account_number
 ```
 
 ### 3. Supabase Secrets (Edge Functions)
 Set these secrets for the Edge Functions:
 ```bash
 supabase secrets set MOOLRE_API_USER=your_username
-supabase secrets set MOOLRE_API_KEY=your_api_key
+supabase secrets set MOOLRE_PRIVATE_KEY=your_private_key
 supabase secrets set MOOLRE_PUBLIC_KEY=your_public_key
-supabase secrets set MOOLRE_BASE_URL=https://sandbox.moolre.com
+supabase secrets set MOOLRE_ACCOUNT_NUMBER=your_account_number
+supabase secrets set MOOLRE_BASE_URL=https://api.moolre.com
 ```
 
 ### 4. Supabase Database Setup

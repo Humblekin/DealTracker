@@ -263,6 +263,57 @@
   margin-top: 16px;
 }
 
+.share-hint {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.share-link-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.share-link-row input {
+  flex: 1;
+}
+
+.share-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-share {
+  font-size: 0.82rem;
+  font-weight: 600;
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+.btn-share:hover {
+  background: var(--border-color);
+}
+
+.qr-section {
+  display: none;
+  margin-top: 16px;
+  text-align: center;
+}
+
+.qr-section.visible {
+  display: block;
+}
+
+.qr-section img {
+  width: 200px;
+  height: 200px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}
+
 @media (max-width: 900px) {
   .deal-detail-grid {
     grid-template-columns: 1fr;

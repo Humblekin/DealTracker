@@ -37,7 +37,7 @@ export default function Dashboard() {
       const total = data?.length || 0;
       const active = data?.filter(d => d.status === DEAL_STATUS.IN_ESCROW).length || 0;
       const completed = data?.filter(d => d.status === DEAL_STATUS.COMPLETED).length || 0;
-      const disputed = data?.filter(d => d.status === DEAL_STATUS.DISPUTE_OPEN).length || 0;
+      const disputed = data?.filter(d => d.status === DEAL_STATUS.DISPUTED).length || 0;
       const totalValue = data?.reduce((sum, d) => sum + parseFloat(d.amount || 0), 0) || 0;
       setStats({ total, active, completed, disputed, totalValue });
     } catch (err) { console.error(err); }
@@ -57,7 +57,7 @@ export default function Dashboard() {
       setPhone('');
       setNetwork('');
       refreshProfile();
-    } catch (err) { toast.error(err.message); }
+    } catch (err) { console.error(err); toast.error('Failed to save payout details.'); }
     finally { setSavingPayout(false); }
   }
 

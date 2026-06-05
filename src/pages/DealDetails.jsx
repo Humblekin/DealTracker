@@ -18,14 +18,14 @@ export default function DealDetails() {
   const [actionLoading, setActionLoading] = useState(false);
   const [disputeReason, setDisputeReason] = useState('');
   const [showDisputeForm, setShowDisputeForm] = useState(false);
-  const [buyerConfirmed, setBuyerConfirmed] = useState(false);
+  const [deliveryConfirmed, setDeliveryConfirmed] = useState(false);
 
   useEffect(() => { fetchDeal(); }, [id]);
 
   async function fetchDeal() {
     try {
       const { data, error } = await supabase.from('deals')
-        .select('*, payments(*), disputes(*)')
+        .select('*, buyer_profile:profiles!buyer_id(full_name), seller_profile:profiles!seller_id(full_name), payments(*), disputes(*)')
         .eq('id', id).single();
       if (error) throw error;
       setDeal(data);
@@ -35,9 +35,18 @@ export default function DealDetails() {
         .eq('deal_id', id)
         .in('action', ['DELIVERY_CONFIRMED', 'FUNDS_TRANSFERRED'])
         .limit(1);
-      setBuyerConfirmed(logs && logs.length > 0);
+      setDeliveryConfirmed(logs && logs.length > 0);
     } catch (err) { toast.error('Deal not found'); navigate('/dashboard'); }
     finally { setLoading(false); }
+  }
+
+  const shareUrl = deal?.share_token ? `${window.location.origin}/deal/${deal.share_token}` : '';
+
+  async function copyShareLink() {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      toast.success('Share link copied!');
+    } catch { toast.error('Failed to copy link'); }
   }
 
   async function handlePayment() {
@@ -58,12 +67,12 @@ export default function DealDetails() {
           }),
         }
       );
-      const body = await res.json();
-      if (!res.ok) throw new Error(body.error || 'Failed to initiate payment');
+      const resBody = await res.json();
+      if (!res.ok) throw new Error(resBody.error || 'Failed to initiate payment');
 
-      // Redirect to Moolre checkout
-      window.location.href = body.authorization_url;
+      window.location.href = resBody.authorization_url;
     } catch (err) {
+      console.error(err);
       toast.error(err.message || 'Something went wrong');
     } finally {
       setActionLoading(false);
@@ -86,10 +95,10 @@ export default function DealDetails() {
           body: JSON.stringify({ deal_id: deal.id }),
         }
       );
-      const body = await res.json();
-      if (!res.ok) throw new Error(body.error || 'Confirmation failed');
-      setBuyerConfirmed(true);
-      toast.success(body.message || 'Delivery confirmed!');
+      const resBody = await res.json();
+      if (!res.ok) throw new Error(resBody.error || 'Confirmation failed');
+      setDeliveryConfirmed(true);
+      toast.success(resBody.message || 'Delivery confirmed!');
       fetchDeal();
     } catch (err) {
       toast.error(err.message || 'Something went wrong');
@@ -104,12 +113,25 @@ export default function DealDetails() {
     setActionLoading(true);
     try {
       await supabase.from('disputes').insert({ deal_id: deal.id, reason: disputeReason, opened_by: profile.id, status: 'OPEN' });
-      await supabase.from('deals').update({ status: DEAL_STATUS.DISPUTE_OPEN }).eq('id', deal.id);
+      await supabase.from('deals').update({ status: DEAL_STATUS.DISPUTED }).eq('id', deal.id);
       await supabase.from('audit_logs').insert({ deal_id: deal.id, action: 'DISPUTE_OPENED', actor_id: profile.id, details: { reason: disputeReason } });
       toast.success('Dispute opened. Admin will review.');
       setShowDisputeForm(false);
       fetchDeal();
-    } catch (err) { toast.error(err.message); }
+    } catch (err) { console.error(err); toast.error('Failed to open dispute.'); }
+    finally { setActionLoading(false); }
+  }
+
+  async function handleCancelDeal() {
+    if (!window.confirm('Cancel this deal? This cannot be undone.')) return;
+    setActionLoading(true);
+    try {
+      const { error } = await supabase.from('deals').update({ status: DEAL_STATUS.CANCELLED }).eq('id', deal.id);
+      if (error) throw error;
+      await supabase.from('audit_logs').insert({ deal_id: deal.id, action: 'DEAL_CANCELLED', actor_id: profile.id, details: {} });
+      toast.success('Deal cancelled.');
+      fetchDeal();
+    } catch (err) { console.error(err); toast.error('Failed to cancel deal.'); }
     finally { setActionLoading(false); }
   }
 
@@ -118,11 +140,15 @@ export default function DealDetails() {
 
   const isBuyer = profile?.id === deal.buyer_id;
   const isSeller = profile?.id === deal.seller_id;
+  const isCreator = deal.creator_role === 'BUYER' ? isBuyer : isSeller;
+  const counterpartyJoined = deal.creator_role === 'BUYER' ? !!deal.seller_id : !!deal.buyer_id;
+  const canShare = isCreator && deal.status === DEAL_STATUS.AWAITING_COUNTERPARTY;
+  const joinRole = deal.creator_role === 'BUYER' ? 'Seller' : 'Buyer';
 
   return (
     <div className="page-wrapper deal-details-page">
       <div className="container-md">
-        
+
         <div className="deal-detail-header-wrap glass-card">
           <div className="deal-detail-header">
             <div className="deal-header-info">
@@ -148,18 +174,49 @@ export default function DealDetails() {
               ) : (
                 <p className="deal-description text-muted">No specific terms provided.</p>
               )}
-              
+
               <div className="parties-grid">
                 <div className="party-card">
                   <span className="party-role">Buyer</span>
-                  <span className="party-name">{deal.buyer_profile?.full_name}</span>
+                  <span className="party-name">
+                    {deal.buyer_profile?.full_name || (
+                      <span className="text-muted">
+                        {deal.creator_role === 'BUYER' ? 'You (Creator)' : `Awaiting ${joinRole.toLowerCase()}...`}
+                      </span>
+                    )}
+                  </span>
                 </div>
                 <div className="party-card">
                   <span className="party-role">Seller</span>
-                  <span className="party-name">{deal.seller_profile?.full_name}</span>
+                  <span className="party-name">
+                    {deal.seller_profile?.full_name || (
+                      <span className="text-muted">
+                        {deal.creator_role === 'SELLER' ? 'You (Creator)' : 'Awaiting seller...'}
+                      </span>
+                    )}
+                  </span>
                 </div>
               </div>
             </div>
+
+            {canShare && (
+              <div className="glass-card">
+                <h3 className="detail-section-title">Share Deal</h3>
+                <p className="share-hint">Share this link with a {joinRole.toLowerCase()} to let them join the escrow.</p>
+                <div className="share-link-row">
+                  <input className="form-input" value={shareUrl} readOnly onClick={e => e.target.select()} />
+                  <button className="btn btn-primary btn-sm" onClick={copyShareLink}>Copy</button>
+                </div>
+                <div className="share-buttons">
+                  <a className="btn btn-sm btn-share" href={`https://wa.me/?text=${encodeURIComponent(shareUrl)}`} target="_blank" rel="noopener noreferrer">WhatsApp</a>
+                  <a className="btn btn-sm btn-share" href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`} target="_blank" rel="noopener noreferrer">Facebook</a>
+                  <button className="btn btn-sm btn-share" onClick={() => document.getElementById('qr-section').classList.toggle('visible')}>QR Code</button>
+                </div>
+                <div id="qr-section" className="qr-section">
+                  <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(shareUrl)}`} alt="QR Code" />
+                </div>
+              </div>
+            )}
 
             {deal.disputes?.length > 0 && (
               <div className="glass-card dispute-details-card">
@@ -185,17 +242,50 @@ export default function DealDetails() {
           <div className="deal-detail-sidebar">
             <div className="glass-card deal-actions-card">
               <h3 className="detail-section-title">Required Actions</h3>
-              
-              {deal.status === DEAL_STATUS.PENDING_PAYMENT && isBuyer && (
+
+              {deal.status === DEAL_STATUS.AWAITING_COUNTERPARTY && isCreator && (
+                <div className="action-wrapper">
+                  <div className="status-notice notice-warning" style={{marginBottom: '12px'}}>
+                    <div className="notice-icon">🔗</div>
+                    <div className="notice-content">
+                      <h4>Awaiting {joinRole}</h4>
+                      <p>Share the deal link with a {joinRole.toLowerCase()} to begin the transaction.</p>
+                    </div>
+                  </div>
+                  <button className="btn btn-outline btn-full action-btn" onClick={handleCancelDeal} disabled={actionLoading}>
+                    Cancel Deal
+                  </button>
+                </div>
+              )}
+
+              {deal.status === DEAL_STATUS.AWAITING_PAYMENT && isBuyer && (
                 <div className="action-wrapper">
                   <p className="action-hint">Fund the escrow to secure this transaction.</p>
                   <button className="btn btn-primary btn-full btn-lg action-btn" onClick={handlePayment} disabled={actionLoading}>
                     {actionLoading ? <><span className="spinner spinner-sm"></span> Initializing...</> : <><span className="btn-icon">💳</span> Pay with Moolre</>}
                   </button>
+                  <button className="btn btn-outline btn-full action-btn" onClick={handleCancelDeal} disabled={actionLoading}>
+                    Cancel Deal
+                  </button>
                 </div>
               )}
-              
-              {deal.status === DEAL_STATUS.IN_ESCROW && isBuyer && !buyerConfirmed && (
+
+              {deal.status === DEAL_STATUS.AWAITING_PAYMENT && isSeller && (
+                <div className="action-wrapper">
+                  <div className="status-notice notice-warning" style={{marginBottom: '12px'}}>
+                    <div className="notice-icon">⏳</div>
+                    <div className="notice-content">
+                      <h4>Awaiting Payment</h4>
+                      <p>Waiting for the buyer to fund the escrow account.</p>
+                    </div>
+                  </div>
+                  <button className="btn btn-outline btn-full action-btn" onClick={handleCancelDeal} disabled={actionLoading}>
+                    Cancel Deal
+                  </button>
+                </div>
+              )}
+
+              {deal.status === DEAL_STATUS.IN_ESCROW && isBuyer && !deliveryConfirmed && (
                 <div className="action-group">
                   <p className="action-hint">Has the seller fulfilled their obligations?</p>
                   <button className="btn btn-success btn-full action-btn" onClick={handleConfirmDelivery} disabled={actionLoading}>
@@ -206,8 +296,8 @@ export default function DealDetails() {
                   </button>
                 </div>
               )}
-              
-              {deal.status === DEAL_STATUS.IN_ESCROW && isBuyer && buyerConfirmed && (
+
+              {deal.status === DEAL_STATUS.IN_ESCROW && isBuyer && deliveryConfirmed && (
                 <div className="status-notice notice-info">
                   <div className="notice-icon">⏳</div>
                   <div className="notice-content">
@@ -216,8 +306,8 @@ export default function DealDetails() {
                   </div>
                 </div>
               )}
-              
-              {deal.status === DEAL_STATUS.IN_ESCROW && isSeller && !buyerConfirmed && (
+
+              {deal.status === DEAL_STATUS.IN_ESCROW && isSeller && !deliveryConfirmed && (
                 <div className="status-notice notice-warning">
                   <div className="notice-icon">⏳</div>
                   <div className="notice-content">
@@ -226,8 +316,8 @@ export default function DealDetails() {
                   </div>
                 </div>
               )}
-              
-              {deal.status === DEAL_STATUS.IN_ESCROW && isSeller && buyerConfirmed && (
+
+              {deal.status === DEAL_STATUS.IN_ESCROW && isSeller && deliveryConfirmed && (
                 <div className="status-notice notice-success">
                   <div className="notice-icon">🎉</div>
                   <div className="notice-content">
@@ -236,7 +326,17 @@ export default function DealDetails() {
                   </div>
                 </div>
               )}
-              
+
+              {deal.status === DEAL_STATUS.DELIVERED && (
+                <div className="status-notice notice-info">
+                  <div className="notice-icon">📦</div>
+                  <div className="notice-content">
+                    <h4>Delivery Confirmed</h4>
+                    <p>Payout is being processed. Funds will arrive shortly.</p>
+                  </div>
+                </div>
+              )}
+
               {deal.status === DEAL_STATUS.COMPLETED && (
                 <div className="status-notice notice-success">
                   <div className="notice-icon">✅</div>
@@ -246,8 +346,8 @@ export default function DealDetails() {
                   </div>
                 </div>
               )}
-              
-              {deal.status === DEAL_STATUS.DISPUTE_OPEN && (
+
+              {deal.status === DEAL_STATUS.DISPUTED && (
                 <div className="status-notice notice-danger">
                   <div className="notice-icon">⚠️</div>
                   <div className="notice-content">
@@ -256,13 +356,13 @@ export default function DealDetails() {
                   </div>
                 </div>
               )}
-              
-              {deal.status === DEAL_STATUS.PENDING_PAYMENT && isSeller && (
-                <div className="status-notice notice-warning">
-                  <div className="notice-icon">⏳</div>
+
+              {deal.status === DEAL_STATUS.CANCELLED && (
+                <div className="status-notice notice-danger">
+                  <div className="notice-icon">✕</div>
                   <div className="notice-content">
-                    <h4>Awaiting Funds</h4>
-                    <p>Waiting for the buyer to fund the escrow account. Do not provide goods/services yet.</p>
+                    <h4>Deal Cancelled</h4>
+                    <p>This transaction has been cancelled. No funds were exchanged.</p>
                   </div>
                 </div>
               )}
@@ -277,7 +377,6 @@ export default function DealDetails() {
           </div>
         </div>
 
-        {/* Dispute Modal */}
         {showDisputeForm && (
           <div className="modal-overlay" onClick={() => setShowDisputeForm(false)}>
             <div className="modal-content" onClick={e => e.stopPropagation()}>

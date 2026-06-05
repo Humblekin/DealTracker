@@ -5,14 +5,24 @@ import './DealCard.css';
 
 export default function DealCard({ deal, userId }) {
   const isBuyerForDeal = deal.buyer_id === userId;
-  
-  const otherParty = isBuyerForDeal
-    ? deal.seller_profile?.full_name || 'Seller'
-    : deal.buyer_profile?.full_name || 'Buyer';
+  const isSellerForDeal = deal.seller_id === userId;
 
-  const otherLabel = isBuyerForDeal ? 'Seller' : 'Buyer';
-  
-  const isActionNeeded = (isBuyerForDeal && deal.status === 'PENDING_PAYMENT') || (!isBuyerForDeal && deal.status === 'IN_ESCROW');
+  const otherParty = deal.buyer_id && deal.seller_id
+    ? (isBuyerForDeal
+        ? deal.seller_profile?.full_name || 'Seller'
+        : deal.buyer_profile?.full_name || 'Buyer')
+    : deal.creator_role
+        ? `Awaiting ${deal.creator_role === 'BUYER' ? 'Seller' : 'Buyer'}...`
+        : 'Awaiting counterparty...';
+
+  const otherLabel = isBuyerForDeal ? 'Seller' : (isSellerForDeal ? 'Buyer' : 'Counterparty');
+
+  const isAwaitingCounterparty = deal.status === 'AWAITING_COUNTERPARTY';
+  const isCreator = isAwaitingCounterparty && (
+    (deal.creator_role === 'BUYER' && isBuyerForDeal) ||
+    (deal.creator_role === 'SELLER' && isSellerForDeal)
+  );
+  const isActionNeeded = isCreator || (isBuyerForDeal && deal.status === 'AWAITING_PAYMENT') || (!isBuyerForDeal && !isSellerForDeal && deal.status === 'IN_ESCROW');
 
   return (
     <Link to={`/deals/${deal.id}`} className={`deal-card ${isActionNeeded ? 'deal-action-needed' : ''}`}>

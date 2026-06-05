@@ -24,12 +24,16 @@ CREATE TABLE IF NOT EXISTS public.deals (
   title TEXT NOT NULL,
   description TEXT,
   amount DECIMAL(12,2) NOT NULL CHECK (amount > 0),
-  buyer_id UUID NOT NULL REFERENCES public.profiles(id),
-  seller_id UUID NOT NULL REFERENCES public.profiles(id),
-  status TEXT NOT NULL DEFAULT 'PENDING_PAYMENT' CHECK (status IN (
-    'PENDING_PAYMENT', 'IN_ESCROW', 'COMPLETED',
-    'DISPUTE_OPEN', 'REFUNDED'
+  creator_role TEXT NOT NULL CHECK (creator_role IN ('BUYER', 'SELLER')),
+  buyer_id UUID REFERENCES public.profiles(id),
+  seller_id UUID REFERENCES public.profiles(id),
+  status TEXT NOT NULL DEFAULT 'AWAITING_COUNTERPARTY' CHECK (status IN (
+    'AWAITING_COUNTERPARTY', 'AWAITING_PAYMENT', 'IN_ESCROW', 'DELIVERED', 'COMPLETED',
+    'DISPUTED', 'REFUNDED', 'CANCELLED'
   )),
+  share_token TEXT UNIQUE,
+  net_amount DECIMAL(12,2) DEFAULT 0,
+  platform_fee DECIMAL(12,2) DEFAULT 0,
   fee_breakdown JSONB,
   payment_reference TEXT,
   moolre_reference TEXT,
@@ -150,6 +154,12 @@ CREATE POLICY "Users can view all profiles" ON public.profiles
 CREATE POLICY "Users can update own profile" ON public.profiles
   FOR UPDATE USING (auth.uid() = id);
 
+CREATE POLICY "Admins can update any profile" ON public.profiles
+  FOR UPDATE USING (public.get_user_role() = 'admin');
+
+CREATE POLICY "Admins can delete profiles" ON public.profiles
+  FOR DELETE USING (public.get_user_role() = 'admin');
+
 -- ---- DEALS POLICIES ----
 CREATE POLICY "Users can view own deals" ON public.deals
   FOR SELECT USING (
@@ -158,10 +168,10 @@ CREATE POLICY "Users can view own deals" ON public.deals
     public.get_user_role() = 'admin'
   );
 
-CREATE POLICY "Buyers can create deals" ON public.deals
+CREATE POLICY "Authenticated users can create deals" ON public.deals
   FOR INSERT WITH CHECK (
-    auth.uid() = buyer_id AND
-    public.get_user_role() IN ('buyer', 'admin')
+    (auth.uid() = buyer_id OR auth.uid() = seller_id) AND
+    public.get_user_role() IN ('buyer', 'seller', 'admin')
   );
 
 CREATE POLICY "Authorized users can update deals" ON public.deals
@@ -171,12 +181,21 @@ CREATE POLICY "Authorized users can update deals" ON public.deals
     public.get_user_role() = 'admin'
   );
 
+CREATE POLICY "Anyone can view shared deals" ON public.deals
+  FOR SELECT USING (share_token IS NOT NULL);
+
+CREATE POLICY "Admins can delete deals" ON public.deals
+  FOR DELETE USING (public.get_user_role() = 'admin');
+
 -- ⚠️ STATUS TRANSITIONS are enforced by Edge Functions (service role key).
 -- The frontend can only update deals via edge functions for critical transitions:
---   PENDING_PAYMENT → IN_ESCROW (moolre-webhook, system)
---   IN_ESCROW → COMPLETED (confirm-delivery, auto payout)
---   IN_ESCROW → DISPUTE_OPEN (frontend via RLS)
---   DISPUTE_OPEN → REFUNDED (admin only via RLS)
+--   AWAITING_COUNTERPARTY → AWAITING_PAYMENT (join-deal, counterparty joins)
+--   AWAITING_PAYMENT → IN_ESCROW (moolre-webhook, system)
+--   IN_ESCROW → DELIVERED (confirm-delivery, buyer confirms)
+--   DELIVERED → COMPLETED (confirm-delivery, auto payout)
+--   AWAITING_COUNTERPARTY / AWAITING_PAYMENT → CANCELLED (frontend via RLS)
+--   IN_ESCROW → DISPUTED (frontend via RLS)
+--   DISPUTED → REFUNDED (admin only via RLS)
 -- The service role key bypasses RLS, so edge functions can perform any transition.
 
 -- ---- PAYMENTS POLICIES ----
@@ -217,12 +236,17 @@ CREATE POLICY "Admins can update disputes" ON public.disputes
     public.get_user_role() = 'admin'
   );
 
+CREATE POLICY "Admins can delete disputes" ON public.disputes
+  FOR DELETE USING (public.get_user_role() = 'admin');
+
 -- ---- NOTIFICATIONS POLICIES ----
 CREATE POLICY "Users can view own notifications" ON public.notifications
   FOR SELECT USING (auth.uid() = user_id);
 
-CREATE POLICY "System can insert notifications" ON public.notifications
-  FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can insert own notifications" ON public.notifications
+  FOR INSERT WITH CHECK (
+    auth.uid() = user_id OR public.get_user_role() = 'admin'
+  );
 
 CREATE POLICY "Users can update own notifications" ON public.notifications
   FOR UPDATE USING (auth.uid() = user_id);
@@ -238,8 +262,10 @@ CREATE POLICY "Admins can view audit logs" ON public.audit_logs
     )
   );
 
-CREATE POLICY "System can insert audit logs" ON public.audit_logs
-  FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can insert own audit logs" ON public.audit_logs
+  FOR INSERT WITH CHECK (
+    auth.uid() = actor_id OR public.get_user_role() = 'admin'
+  );
 
 -- Prevent updates/deletes on audit logs (immutable)
 CREATE POLICY "No updates on audit logs" ON public.audit_logs
@@ -254,6 +280,8 @@ CREATE POLICY "No deletes on audit logs" ON public.audit_logs
 CREATE INDEX IF NOT EXISTS idx_deals_buyer ON public.deals(buyer_id);
 CREATE INDEX IF NOT EXISTS idx_deals_seller ON public.deals(seller_id);
 CREATE INDEX IF NOT EXISTS idx_deals_status ON public.deals(status);
+CREATE INDEX IF NOT EXISTS idx_deals_share_token ON public.deals(share_token);
+CREATE INDEX IF NOT EXISTS idx_deals_creator_role ON public.deals(creator_role);
 CREATE INDEX IF NOT EXISTS idx_payments_deal ON public.payments(deal_id);
 CREATE INDEX IF NOT EXISTS idx_disputes_deal ON public.disputes(deal_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON public.notifications(user_id);

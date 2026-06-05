@@ -44,7 +44,7 @@ export function AuthProvider({ children }) {
       setProfile(data);
     } catch (err) {
       console.error('Error fetching profile:', err);
-      toast.error('Profile error: ' + err.message);
+      toast.error('Failed to load profile. Please refresh the page.');
     } finally {
       setLoading(false);
     }

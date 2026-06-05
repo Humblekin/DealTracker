@@ -53,8 +53,23 @@
 
 .admin-actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
+  flex-wrap: wrap;
+}
+
+.creator-tag {
+  display: inline-block;
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: rgba(99, 102, 241, 0.15);
+  color: #818cf8;
+  padding: 1px 6px;
+  border-radius: var(--radius-xs);
+  margin-left: 4px;
+  vertical-align: middle;
 }
 
 .action-done {
@@ -66,6 +81,7 @@
   padding: 4px 8px;
   background: rgba(99, 120, 150, 0.1);
   border-radius: var(--radius-sm);
+  white-space: nowrap;
 }
 
 .reason-cell {
@@ -83,5 +99,93 @@
 }
 
 .text-muted {
+  color: var(--text-muted);
+}
+
+/* ---- Admin Action Buttons ---- */
+.admin-action-btn {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.admin-action-btn:hover {
+  background: var(--border-color);
+  color: var(--text-primary);
+}
+
+.admin-action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.admin-action-btn.edit {
+  color: var(--color-info);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.admin-action-btn.edit:hover {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: var(--color-info);
+}
+
+.admin-action-btn.del {
+  color: var(--color-danger);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.admin-action-btn.del:hover {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: var(--color-danger);
+}
+
+/* ---- Modal ---- */
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* ---- Confirm Delete Modal ---- */
+.confirm-text {
+  font-size: 1rem;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.confirm-sub {
+  font-size: 0.85rem;
   color: var(--text-muted);
 }

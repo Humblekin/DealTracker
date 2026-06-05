@@ -24,6 +24,11 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(null);
+  const [editingDeal, setEditingDeal] = useState(null);
+  const [editingUser, setEditingUser] = useState(null);
+  const [deletingTarget, setDeletingTarget] = useState(null);
+  const [deletingType, setDeletingType] = useState(null);
+  const [editForm, setEditForm] = useState({});
 
   useEffect(() => { loadAll(); }, []);
 
@@ -44,20 +49,20 @@ export default function AdminDashboard() {
       setDisputes(disputesRes.data || []);
       setUsers(usersRes.data || []);
       
-      const paidDeals = d.filter(x => x.status !== 'PENDING_PAYMENT');
+      const paidDeals = d.filter(x => x.status !== 'AWAITING_PAYMENT');
       const platformProfit = paidDeals.reduce((s, x) => s + (parseFloat(parseFees(x).platformFee) || 0), 0);
       
       setStats({
         totalDeals: d.length,
         activeEscrow: d.filter(x => x.status === DEAL_STATUS.IN_ESCROW).length,
-        openDisputes: d.filter(x => x.status === DEAL_STATUS.DISPUTE_OPEN).length,
+        openDisputes: d.filter(x => x.status === DEAL_STATUS.DISPUTED).length,
         completed: d.filter(x => x.status === DEAL_STATUS.COMPLETED).length,
         totalVolume: d.reduce((s, x) => s + parseFloat(x.amount || 0), 0),
         platformProfit,
       });
     } catch (err) { 
       console.error(err); 
-      toast.error('Error fetching data: ' + err.message);
+      toast.error('Failed to load dashboard data.');
     }
     finally { setLoading(false); }
   }
@@ -74,12 +79,12 @@ export default function AdminDashboard() {
       await supabase.from('disputes').update({ status: 'RESOLVED', admin_decision: 'Released to seller' }).eq('deal_id', dealId).eq('status', 'OPEN');
       await supabase.from('audit_logs').insert({ deal_id: dealId, action: 'ADMIN_MANUAL_RELEASE', actor_id: profile.id, details: { note: 'Admin confirmed manual payout sent' } });
       await supabase.from('notifications').insert([
-        { user_id: deal.seller_id, title: 'Payment Sent!', message: `GH₵ ${parseFloat(deal.amount).toFixed(2)} for "${deal.title}" has been sent to your mobile money.`, type: 'payment', deal_id: dealId },
+        { user_id: deal.seller_id, title: 'Payment Sent!', message: `Funds for "${deal.title}" have been sent.`, type: 'payment', deal_id: dealId },
         { user_id: deal.buyer_id, title: 'Deal Complete', message: `"${deal.title}" is complete. Your funds have been released to the seller.`, type: 'info', deal_id: dealId },
       ]);
       toast.success('Deal completed and seller notified.');
       loadAll();
-    } catch (err) { toast.error(err.message); }
+    } catch (err) { console.error(err); toast.error('Operation failed. Please try again.'); }
     finally { setActionLoading(null); }
   }
 
@@ -92,12 +97,12 @@ export default function AdminDashboard() {
       await supabase.from('disputes').update({ status: 'RESOLVED', admin_decision: 'Refunded to buyer' }).eq('deal_id', dealId).eq('status', 'OPEN');
       await supabase.from('audit_logs').insert({ deal_id: dealId, action: 'ADMIN_MANUAL_REFUND', actor_id: profile.id, details: { note: 'Admin confirmed manual refund sent' } });
       await supabase.from('notifications').insert([
-        { user_id: deal.buyer_id, title: 'Refund Sent!', message: `GH₵ ${parseFloat(deal.amount).toFixed(2)} for "${deal.title}" has been refunded to you.`, type: 'payment', deal_id: dealId },
+        { user_id: deal.buyer_id, title: 'Refund Sent!', message: `Funds for "${deal.title}" have been refunded.`, type: 'payment', deal_id: dealId },
         { user_id: deal.seller_id, title: 'Deal Refunded', message: `"${deal.title}" was refunded to the buyer by admin.`, type: 'info', deal_id: dealId },
       ]);
       toast.success('Buyer refunded and notified.');
       loadAll();
-    } catch (err) { toast.error(err.message); }
+    } catch (err) { console.error(err); toast.error('Operation failed. Please try again.'); }
     finally { setActionLoading(null); }
   }
 
@@ -109,7 +114,89 @@ export default function AdminDashboard() {
       if (error) throw error;
       toast.success('User role updated successfully.');
       loadAll();
-    } catch (err) { toast.error(err.message); }
+    } catch (err) { console.error(err); toast.error('Failed to update role.'); }
+    finally { setActionLoading(null); }
+  }
+
+  function openEditDeal(deal) {
+    setEditingDeal(deal);
+    setEditForm({
+      title: deal.title,
+      description: deal.description || '',
+      amount: deal.amount,
+      status: deal.status,
+    });
+  }
+
+  async function handleSaveDeal() {
+    if (!editingDeal) return;
+    setActionLoading(`edit_${editingDeal.id}`);
+    try {
+      const { error } = await supabase.from('deals').update(editForm).eq('id', editingDeal.id);
+      if (error) throw error;
+      toast.success('Deal updated.');
+      setEditingDeal(null);
+      loadAll();
+    } catch (err) { console.error(err); toast.error('Failed to update deal.'); }
+    finally { setActionLoading(null); }
+  }
+
+  function confirmDeleteDeal(deal) {
+    setDeletingTarget(deal);
+    setDeletingType('deal');
+  }
+
+  async function handleDeleteDeal() {
+    if (!deletingTarget) return;
+    setActionLoading(`del_${deletingTarget.id}`);
+    try {
+      const { error } = await supabase.from('deals').delete().eq('id', deletingTarget.id);
+      if (error) throw error;
+      toast.success('Deal deleted.');
+      setDeletingTarget(null);
+      loadAll();
+    } catch (err) { console.error(err); toast.error('Failed to delete deal.'); }
+    finally { setActionLoading(null); }
+  }
+
+  function openEditUser(user) {
+    setEditingUser(user);
+    setEditForm({
+      full_name: user.full_name,
+      email: user.email || '',
+      phone: user.phone || '',
+      network: user.network || '',
+    });
+  }
+
+  async function handleSaveUser() {
+    if (!editingUser) return;
+    setActionLoading(`edit_${editingUser.id}`);
+    try {
+      const { error } = await supabase.from('profiles').update(editForm).eq('id', editingUser.id);
+      if (error) throw error;
+      toast.success('User updated.');
+      setEditingUser(null);
+      loadAll();
+    } catch (err) { console.error(err); toast.error('Failed to update user.'); }
+    finally { setActionLoading(null); }
+  }
+
+  function confirmDeleteUser(user) {
+    setDeletingTarget(user);
+    setDeletingType('user');
+  }
+
+  async function handleDeleteUser() {
+    if (!deletingTarget) return;
+    setActionLoading(`del_${deletingTarget.id}`);
+    try {
+      const { error } = await supabase.from('profiles').delete().eq('id', deletingTarget.id);
+      if (error) throw error;
+      toast.success('User deleted.');
+      setDeletingTarget(null);
+      loadAll();
+    } catch (err) { console.error(err); toast.error('Failed to delete user.'); }
     finally { setActionLoading(null); }
   }
 
@@ -198,36 +285,37 @@ export default function AdminDashboard() {
         {tab === 'deals' && (
           <div className="table-wrapper">
             <table className="data-table">
-              <thead><tr><th>Title</th><th>Buyer</th><th>Seller</th><th>Seller Payout</th><th>Amount</th><th>Profit</th><th>Status</th><th>Actions</th></tr></thead>
+              <thead><tr><th>Title</th><th>Creator</th><th>Buyer</th><th>Seller</th><th>Amount</th><th>Profit</th><th>Status</th><th>Actions</th></tr></thead>
               <tbody>
                 {deals.map(d => (
                   <tr key={d.id}>
                     <td><Link to={`/deals/${d.id}`}>{d.title}</Link></td>
-                    <td>{d.buyer_profile?.full_name}</td>
-                    <td>{d.seller_profile?.full_name}</td>
-                    <td className="payout-cell">
-                      {d.seller_profile?.phone
-                        ? <><span className="network-tag">{d.seller_profile.network}</span> {d.seller_profile.phone}</>
-                        : <span className="text-muted">—</span>}
+                    <td>
+                      {(d.creator_role === 'BUYER' ? d.buyer_profile?.full_name : d.seller_profile?.full_name) || '—'}
+                      <span className="creator-tag">{d.creator_role}</span>
                     </td>
+                    <td>{d.buyer_profile?.full_name || <span className="text-muted">Awaiting...</span>}</td>
+                    <td>{d.seller_profile?.full_name || <span className="text-muted">Awaiting...</span>}</td>
                     <td className="amount-cell">{formatGHS(d.amount)}</td>
                     <td className="profit-cell">
-                      {d.status !== 'PENDING_PAYMENT'
+                      {!['AWAITING_COUNTERPARTY', 'AWAITING_PAYMENT', 'CANCELLED'].includes(d.status)
                         ? formatGHS(parseFloat(parseFees(d).platformFee) || 0)
                         : '—'}
                     </td>
                     <td><StatusBadge status={d.status} /></td>
                     <td>
                       <div className="admin-actions">
-                        {[DEAL_STATUS.IN_ESCROW, DEAL_STATUS.DISPUTE_OPEN].includes(d.status) && (
+                        {[DEAL_STATUS.IN_ESCROW, DEAL_STATUS.DISPUTED].includes(d.status) && (
                           <>
                             <button className="btn btn-sm btn-success" onClick={() => handleForceRelease(d.id)} disabled={actionLoading === d.id}>Release</button>
                             <button className="btn btn-sm btn-danger" onClick={() => handleForceRefund(d.id)} disabled={actionLoading === d.id}>Refund</button>
                           </>
                         )}
-                        {['COMPLETED', 'REFUNDED'].includes(d.status) && (
+                        {['COMPLETED', 'REFUNDED', 'CANCELLED'].includes(d.status) && (
                           <span className="action-done">{d.status}</span>
                         )}
+                        <button className="admin-action-btn edit" onClick={() => openEditDeal(d)} disabled={actionLoading === `edit_${d.id}`}>Edit</button>
+                        <button className="admin-action-btn del" onClick={() => confirmDeleteDeal(d)} disabled={actionLoading === `del_${d.id}`}>Del</button>
                       </div>
                     </td>
                   </tr>
@@ -276,21 +364,27 @@ export default function AdminDashboard() {
                     <td><span className={`badge ${u.role === 'admin' ? 'badge-escrow' : u.role === 'seller' ? 'badge-funded' : 'badge-pending'}`}>{u.role}</span></td>
                     <td className="text-muted">{new Date(u.created_at).toLocaleDateString('en-GH', { year: 'numeric', month: 'short', day: 'numeric' })}</td>
                     <td>
-                      {profile.id !== u.id ? (
-                        <select 
-                          className="form-input" 
-                          style={{ padding: '6px 12px', fontSize: '0.85rem', width: 'auto' }}
-                          value={u.role}
-                          onChange={(e) => handleChangeRole(u.id, e.target.value)}
-                          disabled={actionLoading === `user_${u.id}`}
-                        >
-                          <option value="buyer">Buyer</option>
-                          <option value="seller">Seller</option>
-                          <option value="admin">Admin</option>
-                        </select>
-                      ) : (
-                        <span className="text-muted" style={{ fontSize: '0.85rem' }}>Current User</span>
-                      )}
+                      <div className="admin-actions">
+                        {profile.id !== u.id ? (
+                          <>
+                            <select 
+                              className="form-input" 
+                              style={{ padding: '6px 12px', fontSize: '0.85rem', width: 'auto' }}
+                              value={u.role}
+                              onChange={(e) => handleChangeRole(u.id, e.target.value)}
+                              disabled={actionLoading === `user_${u.id}`}
+                            >
+                              <option value="buyer">Buyer</option>
+                              <option value="seller">Seller</option>
+                              <option value="admin">Admin</option>
+                            </select>
+                            <button className="admin-action-btn edit" onClick={() => openEditUser(u)} disabled={actionLoading === `edit_${u.id}`}>Edit</button>
+                            <button className="admin-action-btn del" onClick={() => confirmDeleteUser(u)} disabled={actionLoading === `del_${u.id}`}>Del</button>
+                          </>
+                        ) : (
+                          <span className="text-muted" style={{ fontSize: '0.85rem' }}>Current User</span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -299,6 +393,94 @@ export default function AdminDashboard() {
           </div>
         )}
       </div>
+
+      {deletingTarget && (
+        <div className="modal-overlay" onClick={() => setDeletingTarget(null)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Confirm Delete</h2>
+              <button className="modal-close" onClick={() => setDeletingTarget(null)}>&times;</button>
+            </div>
+            <div className="modal-body">
+              <p className="confirm-text">
+                Delete {deletingType === 'deal' ? 'deal' : 'user'} <strong>{deletingTarget.title || deletingTarget.full_name}</strong>?
+              </p>
+              <p className="confirm-sub">This action cannot be undone. All related data may be affected.</p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={() => setDeletingTarget(null)}>Cancel</button>
+              <button className="btn btn-danger" onClick={deletingType === 'deal' ? handleDeleteDeal : handleDeleteUser} disabled={actionLoading}>
+                {actionLoading ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {(editingDeal || editingUser) && (
+        <div className="modal-overlay" onClick={() => { setEditingDeal(null); setEditingUser(null); }}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>{editingDeal ? 'Edit Deal' : 'Edit User'}</h2>
+              <button className="modal-close" onClick={() => { setEditingDeal(null); setEditingUser(null); }}>&times;</button>
+            </div>
+            <div className="modal-body">
+              {editingDeal ? (
+                <>
+                  <div className="form-group">
+                    <label>Title</label>
+                    <input className="form-input" value={editForm.title || ''} onChange={e => setEditForm({...editForm, title: e.target.value})} />
+                  </div>
+                  <div className="form-group">
+                    <label>Description</label>
+                    <textarea className="form-input" rows={3} value={editForm.description || ''} onChange={e => setEditForm({...editForm, description: e.target.value})} />
+                  </div>
+                  <div className="form-group">
+                    <label>Amount (GHS)</label>
+                    <input className="form-input" type="number" step="0.01" value={editForm.amount || ''} onChange={e => setEditForm({...editForm, amount: e.target.value})} />
+                  </div>
+                  <div className="form-group">
+                    <label>Status</label>
+                    <select className="form-input" value={editForm.status || ''} onChange={e => setEditForm({...editForm, status: e.target.value})}>
+                      {Object.entries(DEAL_STATUS).map(([key, val]) => <option key={key} value={val}>{key}</option>)}
+                    </select>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="form-group">
+                    <label>Full Name</label>
+                    <input className="form-input" value={editForm.full_name || ''} onChange={e => setEditForm({...editForm, full_name: e.target.value})} />
+                  </div>
+                  <div className="form-group">
+                    <label>Email</label>
+                    <input className="form-input" value={editForm.email || ''} onChange={e => setEditForm({...editForm, email: e.target.value})} />
+                  </div>
+                  <div className="form-group">
+                    <label>Phone</label>
+                    <input className="form-input" value={editForm.phone || ''} onChange={e => setEditForm({...editForm, phone: e.target.value})} />
+                  </div>
+                  <div className="form-group">
+                    <label>Network</label>
+                    <select className="form-input" value={editForm.network || ''} onChange={e => setEditForm({...editForm, network: e.target.value})}>
+                      <option value="">Select</option>
+                      <option value="mtn">MTN</option>
+                      <option value="vodafone">Vodafone</option>
+                      <option value="tigo">Tigo</option>
+                    </select>
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={() => { setEditingDeal(null); setEditingUser(null); }}>Cancel</button>
+              <button className="btn btn-primary" onClick={editingDeal ? handleSaveDeal : handleSaveUser} disabled={actionLoading}>
+                {actionLoading ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

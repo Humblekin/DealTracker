@@ -8,22 +8,37 @@ const MOOLRE_PUBLIC_KEY = Deno.env.get('MOOLRE_PUBLIC_KEY')!
 const MOOLRE_ACCOUNT_NUMBER = Deno.env.get('MOOLRE_ACCOUNT_NUMBER')!
 const MOOLRE_BASE_URL = Deno.env.get('MOOLRE_BASE_URL') || 'https://api.moolre.com'
 
+const ALLOWED_ORIGINS = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:4173',
+  'https://dealtracker.vercel.app',
+  SUPABASE_URL,
+]
+
+function corsHeaders(origin: string | null): Record<string, string> {
+  const allowed = ALLOWED_ORIGINS.includes(origin || '') ? origin! : 'https://dealtracker.vercel.app'
+  return {
+    'Access-Control-Allow-Origin': allowed,
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Max-Age': '86400',
+    'Content-Type': 'application/json',
+  }
+}
+
 serve(async (req) => {
+  const origin = req.headers.get('Origin')
+  const cors = corsHeaders(origin)
+
   if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': '*',
-        'Access-Control-Max-Age': '86400',
-      },
-    })
+    return new Response(null, { status: 204, headers: cors })
   }
 
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      headers: cors,
     })
   }
 
@@ -32,7 +47,7 @@ serve(async (req) => {
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        headers: cors,
       })
     }
 
@@ -46,7 +61,7 @@ serve(async (req) => {
     if (userError || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        headers: { 'Content-Type': 'application/json', ...cors },
       })
     }
 
@@ -54,7 +69,7 @@ serve(async (req) => {
     if (!deal_id) {
       return new Response(JSON.stringify({ error: 'deal_id is required' }), {
         status: 400,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        headers: { 'Content-Type': 'application/json', ...cors },
       })
     }
 
@@ -67,21 +82,21 @@ serve(async (req) => {
     if (dealError || !deal) {
       return new Response(JSON.stringify({ error: 'Deal not found' }), {
         status: 404,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        headers: { 'Content-Type': 'application/json', ...cors },
       })
     }
 
     if (deal.buyer_id !== user.id) {
       return new Response(JSON.stringify({ error: 'Only the buyer can initiate payment' }), {
         status: 403,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        headers: { 'Content-Type': 'application/json', ...cors },
       })
     }
 
-    if (deal.status !== 'PENDING_PAYMENT') {
-      return new Response(JSON.stringify({ error: `Deal is in "${deal.status}" status, expected PENDING_PAYMENT` }), {
+    if (deal.status !== 'AWAITING_PAYMENT') {
+      return new Response(JSON.stringify({ error: `Deal is in "${deal.status}" status, expected AWAITING_PAYMENT` }), {
         status: 400,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        headers: { 'Content-Type': 'application/json', ...cors },
       })
     }
 
@@ -126,7 +141,7 @@ serve(async (req) => {
         error: moolreData.message || 'Failed to initialize payment with Moolre',
       }), {
         status: 502,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        headers: { 'Content-Type': 'application/json', ...cors },
       })
     }
 
@@ -151,13 +166,13 @@ serve(async (req) => {
       reference: externalRef,
     }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      headers: { 'Content-Type': 'application/json', ...cors },
     })
 
   } catch (err) {
     return new Response(JSON.stringify({ error: err instanceof Error ? err.message : 'Internal server error' }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      headers: { 'Content-Type': 'application/json', ...cors },
     })
   }
 })

@@ -7,11 +7,14 @@ import './Transactions.css';
 
 const STATUS_FILTERS = [
   { value: 'ALL', label: 'All Transactions' },
-  { value: DEAL_STATUS.PENDING_PAYMENT, label: 'Pending Payment' },
+  { value: DEAL_STATUS.AWAITING_COUNTERPARTY, label: 'Awaiting Counterparty' },
+  { value: DEAL_STATUS.AWAITING_PAYMENT, label: 'Awaiting Payment' },
   { value: DEAL_STATUS.IN_ESCROW, label: 'Secured in Escrow' },
+  { value: DEAL_STATUS.DELIVERED, label: 'Delivered' },
   { value: DEAL_STATUS.COMPLETED, label: 'Completed' },
-  { value: DEAL_STATUS.DISPUTE_OPEN, label: 'In Dispute' },
+  { value: DEAL_STATUS.DISPUTED, label: 'Disputed' },
   { value: DEAL_STATUS.REFUNDED, label: 'Refunded' },
+  { value: DEAL_STATUS.CANCELLED, label: 'Cancelled' },
 ];
 
 export default function Transactions() {

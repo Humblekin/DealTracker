@@ -3,10 +3,6 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.106.2'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-const MOOLRE_API_USER = Deno.env.get('MOOLRE_API_USER')!
-const MOOLRE_PRIVATE_KEY = Deno.env.get('MOOLRE_PRIVATE_KEY')!
-const MOOLRE_ACCOUNT_NUMBER = Deno.env.get('MOOLRE_ACCOUNT_NUMBER')!
-const MOOLRE_BASE_URL = Deno.env.get('MOOLRE_BASE_URL') || 'https://api.moolre.com'
 
 const ALLOWED_ORIGINS = [
   'http://localhost:5173',
@@ -24,55 +20,6 @@ function corsHeaders(origin: string | null): Record<string, string> {
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Max-Age': '86400',
     'Content-Type': 'application/json',
-  }
-}
-
-const NETWORK_CHANNEL: Record<string, string> = {
-  mtn: '1',
-  vodafone: '6',
-  tigo: '7',
-}
-
-async function sendPayout(
-  amount: number,
-  recipientPhone: string,
-  network: string,
-  narration: string,
-  reference: string
-) {
-  const channel = NETWORK_CHANNEL[network.toLowerCase()]
-  if (!channel) {
-    return { success: false, error: `Unsupported network: ${network}` }
-  }
-
-  const res = await fetch(`${MOOLRE_BASE_URL}/open/transact/transfer`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-API-USER': MOOLRE_API_USER,
-      'X-API-KEY': MOOLRE_PRIVATE_KEY,
-    },
-    body: JSON.stringify({
-      type: 1,
-      channel,
-      currency: 'GHS',
-      amount: amount.toString(),
-      receiver: recipientPhone,
-      externalref: reference,
-      accountnumber: MOOLRE_ACCOUNT_NUMBER,
-      reference: narration,
-    }),
-  })
-
-  const data = await res.json()
-
-  if (!res.ok || data.status !== '1') {
-    return { success: false, error: data.message || data.error || 'Transfer failed' }
-  }
-
-  return {
-    success: true,
-    reference: data.data?.externalref || reference,
   }
 }
 
@@ -114,53 +61,81 @@ serve(async (req) => {
       })
     }
 
-    const { data: caller } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (caller?.role !== 'admin') {
-      return new Response(JSON.stringify({ error: 'Only admins can manually trigger payouts' }), {
-        status: 403,
-        headers: cors,
-      })
-    }
-
-    const { deal_id, amount, phone, network, narration } = await req.json()
-    if (!deal_id || !amount || !phone || !network) {
-      return new Response(JSON.stringify({ error: 'deal_id, amount, phone, and network are required' }), {
+    const { share_token } = await req.json()
+    if (!share_token) {
+      return new Response(JSON.stringify({ error: 'share_token is required' }), {
         status: 400,
         headers: cors,
       })
     }
 
-    const reference = `PO-${deal_id}-${Date.now()}`
-    const result = await sendPayout(
-      parseFloat(amount),
-      phone,
-      network,
-      narration || 'SecureTrade payout',
-      reference
-    )
+    const { data: deal, error: dealError } = await supabase
+      .from('deals')
+      .select('*')
+      .eq('share_token', share_token)
+      .single()
 
-    if (!result.success) {
-      return new Response(JSON.stringify({ error: result.error }), {
-        status: 502,
+    if (dealError || !deal) {
+      return new Response(JSON.stringify({ error: 'Deal not found' }), {
+        status: 404,
         headers: cors,
       })
     }
 
+    if (deal.status !== 'AWAITING_COUNTERPARTY') {
+      return new Response(JSON.stringify({ error: 'This deal is no longer accepting participants' }), {
+        status: 400,
+        headers: cors,
+      })
+    }
+
+    const counterpartyFilled = deal.creator_role === 'BUYER' ? !!deal.seller_id : !!deal.buyer_id
+    if (counterpartyFilled) {
+      return new Response(JSON.stringify({ error: 'A counterparty has already joined this deal' }), {
+        status: 400,
+        headers: cors,
+      })
+    }
+
+    if (deal.buyer_id === user.id || deal.seller_id === user.id) {
+      return new Response(JSON.stringify({ error: 'You are already part of this deal' }), {
+        status: 400,
+        headers: cors,
+      })
+    }
+
+    const updateData = deal.creator_role === 'BUYER'
+      ? { seller_id: user.id, status: 'AWAITING_PAYMENT' }
+      : { buyer_id: user.id, status: 'AWAITING_PAYMENT' }
+
+    const { error: updateError } = await supabase
+      .from('deals')
+      .update(updateData)
+      .eq('id', deal.id)
+
+    if (updateError) {
+      throw new Error('Failed to join deal')
+    }
+
     await supabase.from('audit_logs').insert({
-      deal_id,
-      action: 'PAYOUT_SENT',
+      deal_id: deal.id,
+      action: 'COUNTERPARTY_JOINED',
       actor_id: user.id,
-      details: { reference: result.reference, amount, phone, network },
+      details: { role: deal.creator_role === 'BUYER' ? 'SELLER' : 'BUYER' },
+    })
+
+    await supabase.from('notifications').insert({
+      user_id: deal.creator_role === 'BUYER' ? deal.buyer_id : deal.seller_id,
+      title: 'Counterparty Joined',
+      message: `A ${deal.creator_role === 'BUYER' ? 'seller' : 'buyer'} has joined your deal "${deal.title}"`,
+      type: 'info',
+      deal_id: deal.id,
     })
 
     return new Response(JSON.stringify({
       success: true,
-      reference: result.reference,
+      message: `You joined as ${deal.creator_role === 'BUYER' ? 'seller' : 'buyer'}`,
+      deal_id: deal.id,
     }), {
       status: 200,
       headers: cors,

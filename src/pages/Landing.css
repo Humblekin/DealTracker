@@ -156,7 +156,6 @@
   justify-content: center;
   gap: 32px;
   opacity: 0.5;
-  filter: grayscale(100%);
   transition: opacity var(--transition-base);
 }
 
@@ -169,6 +168,7 @@
   font-size: 1.2rem;
   font-weight: 800;
   letter-spacing: -0.02em;
+  color: #D4980C;
 }
 
 /* ---------- Sections Common ---------- */
