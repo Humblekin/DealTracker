@@ -131,6 +131,12 @@
   font-weight: 600;
 }
 
+.auth-prompt {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .login-hint a:hover {
   text-decoration: underline;
 }

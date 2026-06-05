@@ -32,10 +32,6 @@ export default function SharedDeal() {
   }, [shareToken]);
 
   async function handleJoin() {
-    if (!profile) {
-      navigate(`/register?redirect=/deal/${shareToken}`);
-      return;
-    }
     setJoining(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -138,10 +134,21 @@ export default function SharedDeal() {
               </div>
             )}
 
-            {!isCreator && !isCounterparty && deal.status === DEAL_STATUS.AWAITING_COUNTERPARTY && !counterpartyFilled && (
+            {!isCreator && !isCounterparty && deal.status === DEAL_STATUS.AWAITING_COUNTERPARTY && !counterpartyFilled && profile && (
               <button className="btn btn-primary btn-full btn-lg" onClick={handleJoin} disabled={joining}>
                 {joining ? <><span className="spinner spinner-sm"></span> Joining...</> : `Join as ${joinRole}`}
               </button>
+            )}
+
+            {!isCreator && !isCounterparty && deal.status === DEAL_STATUS.AWAITING_COUNTERPARTY && !counterpartyFilled && !profile && (
+              <div className="auth-prompt">
+                <button className="btn btn-primary btn-full btn-lg" onClick={() => navigate(`/login?redirect=/deal/${shareToken}`)}>
+                  Sign In to Join as {joinRole}
+                </button>
+                <p className="login-hint">
+                  No account? <Link to={`/register?redirect=/deal/${shareToken}`}>Create one</Link>
+                </p>
+              </div>
             )}
 
             {!isCreator && !isCounterparty && deal.status !== DEAL_STATUS.AWAITING_COUNTERPARTY && (
@@ -149,13 +156,6 @@ export default function SharedDeal() {
                 <span className="joined-icon">✓</span>
                 Counterparty Joined
               </div>
-            )}
-
-            {!profile && deal.status === DEAL_STATUS.AWAITING_COUNTERPARTY && !counterpartyFilled && (
-              <p className="login-hint">
-                <Link to={`/register?redirect=/deal/${shareToken}`}>Create an account</Link> or{' '}
-                <Link to={`/login?redirect=/deal/${shareToken}`}>sign in</Link> to join as {joinRole.toLowerCase()}
-              </p>
             )}
 
             {isCreator && counterpartyFilled && (
