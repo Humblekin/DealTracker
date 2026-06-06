@@ -1,12 +1,14 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import './Auth.css';
 
 export default function Register() {
   const { signUp } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '', email: '', password: '', confirmPassword: '', role: 'buyer',
@@ -24,7 +26,9 @@ export default function Register() {
     try {
       await signUp({ email: formData.email, password: formData.password, fullName: formData.fullName, role: formData.role });
       toast.success('Account created successfully');
-      navigate('/dashboard');
+      const redirect = searchParams.get('redirect');
+      if (redirect) navigate(redirect);
+      else navigate('/dashboard');
     } catch (err) { console.error(err); toast.error('Registration failed. Please try again.'); }
     finally { setLoading(false); }
   };

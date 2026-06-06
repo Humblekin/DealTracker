@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
@@ -8,6 +8,7 @@ import './Auth.css';
 export default function Login() {
   const { signIn } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
@@ -23,9 +24,13 @@ export default function Login() {
     setLoading(true);
     try {
       await signIn({ email: formData.email, password: formData.password });
-      const { data: profile } = await supabase.from('profiles').select('role').eq('id', (await supabase.auth.getUser()).data.user.id).single();
-      toast.success('Authentication successful');
-      navigate(profile?.role === 'admin' ? '/admin' : '/dashboard');
+      const redirect = searchParams.get('redirect');
+      if (redirect) {
+        navigate(redirect);
+      } else {
+        const { data: profile } = await supabase.from('profiles').select('role').eq('id', (await supabase.auth.getUser()).data.user.id).single();
+        navigate(profile?.role === 'admin' ? '/admin' : '/dashboard');
+      }
     } catch (err) {
       toast.error(err.message || 'Invalid credentials');
     } finally {
