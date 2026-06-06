@@ -11,7 +11,7 @@ export default function Register() {
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    fullName: '', email: '', password: '', confirmPassword: '', role: 'buyer',
+    fullName: '', email: '', password: '', confirmPassword: '',
   });
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -24,7 +24,7 @@ export default function Register() {
     if (formData.password !== formData.confirmPassword) { toast.error('Passwords do not match'); return; }
     setLoading(true);
     try {
-      await signUp({ email: formData.email, password: formData.password, fullName: formData.fullName, role: formData.role });
+      await signUp({ email: formData.email, password: formData.password, fullName: formData.fullName });
       toast.success('Account created successfully');
       const redirect = searchParams.get('redirect');
       if (redirect) navigate(redirect);
@@ -79,29 +79,7 @@ export default function Register() {
               <label className="form-label" htmlFor="reg-confirm">Confirm Password</label>
               <input id="reg-confirm" type="password" name="confirmPassword" className="form-input" placeholder="••••••••" value={formData.confirmPassword} onChange={handleChange} required />
             </div>
-            
-            <div className="form-group">
-              <label className="form-label">Primary Usage</label>
-              <div className="role-selector">
-                <label className={`role-option ${formData.role === 'buyer' ? 'active' : ''}`}>
-                  <input type="radio" name="role" value="buyer" checked={formData.role === 'buyer'} onChange={handleChange} />
-                  <span className="role-option-content">
-                    <span className="role-option-icon">🛒</span>
-                    <span className="role-option-label">Buyer</span>
-                    <span className="role-option-desc">Fund and approve deals</span>
-                  </span>
-                </label>
-                <label className={`role-option ${formData.role === 'seller' ? 'active' : ''}`}>
-                  <input type="radio" name="role" value="seller" checked={formData.role === 'seller'} onChange={handleChange} />
-                  <span className="role-option-content">
-                    <span className="role-option-icon">💼</span>
-                    <span className="role-option-label">Seller</span>
-                    <span className="role-option-desc">Provide goods/services</span>
-                  </span>
-                </label>
-              </div>
-            </div>
-            
+
             <button type="submit" className="btn btn-primary btn-full btn-lg" disabled={loading}>
               {loading ? <><span className="spinner spinner-sm"></span>Processing...</> : 'Open Account'}
             </button>

@@ -31,7 +31,7 @@ export default function DealCard({ deal, userId }) {
           <h3>{deal.title || 'Untitled Deal'}</h3>
           <p className="deal-card-amount">{formatGHS(deal.amount)}</p>
         </div>
-        <StatusBadge status={deal.status} />
+        <StatusBadge status={deal.status} role={isBuyerForDeal ? 'buyer' : isSellerForDeal ? 'seller' : undefined} />
       </div>
       
       {deal.description && (

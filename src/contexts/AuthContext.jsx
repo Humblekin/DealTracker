@@ -50,14 +50,13 @@ export function AuthProvider({ children }) {
     }
   }
 
-  async function signUp({ email, password, fullName, role }) {
+  async function signUp({ email, password, fullName }) {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
           full_name: fullName,
-          role: role,
         },
       },
     });
@@ -104,8 +103,6 @@ export function AuthProvider({ children }) {
     signOut,
     refreshProfile: () => user && fetchProfile(user.id),
     isAdmin: profile?.role === 'admin',
-    isBuyer: profile?.role === 'buyer',
-    isSeller: profile?.role === 'seller',
   };
 
   return (

@@ -154,7 +154,7 @@ export default function DealDetails() {
             <div className="deal-header-info">
               <h1>{deal.title}</h1>
               <div className="deal-header-meta">
-                <StatusBadge status={deal.status} />
+                <StatusBadge status={deal.status} role={isBuyer ? 'buyer' : isSeller ? 'seller' : undefined} />
                 <span className="deal-date">{new Date(deal.created_at).toLocaleDateString('en-GH', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
               </div>
             </div>

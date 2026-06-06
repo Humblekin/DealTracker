@@ -100,52 +100,50 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {profile?.role === 'seller' && (
-          <div className="payout-card glass-card">
-            <div className="payout-card-header">
-              <div className="payout-icon-wrap">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+        <div className="payout-card glass-card">
+          <div className="payout-card-header">
+            <div className="payout-icon-wrap">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+            </div>
+            <div className="payout-card-title">
+              <h3>Payout Configuration</h3>
+              <p>Set your mobile money number to receive deal settlements</p>
+            </div>
+          </div>
+          
+          {profile.phone && profile.network ? (
+            <div className="payout-configured">
+              <div className="configured-info">
+                <span className="network-badge">{profile.network.toUpperCase()}</span>
+                <span className="phone-number">{profile.phone}</span>
               </div>
-              <div className="payout-card-title">
-                <h3>Payout Configuration</h3>
-                <p>Set your mobile money number to receive deal settlements</p>
+              <button className="btn btn-ghost btn-sm" onClick={() => { setPhone(profile.phone); setNetwork(profile.network); }}>Edit</button>
+            </div>
+          ) : null}
+
+          {(!profile.phone || !profile.network || phone || network) && (
+            <div className="payout-form">
+              <div className="payout-row">
+                <select className="form-select payout-network" value={network} onChange={e => setNetwork(e.target.value)}>
+                  <option value="">Select Network</option>
+                  <option value="mtn">MTN Mobile Money</option>
+                  <option value="vodafone">Telecel Cash</option>
+                  <option value="tigo">AT Money</option>
+                </select>
+                <input
+                  type="tel"
+                  className="form-input payout-phone"
+                  placeholder="Enter mobile number"
+                  value={phone}
+                  onChange={e => setPhone(e.target.value)}
+                />
+                <button className="btn btn-primary payout-save-btn" onClick={handleSavePayout} disabled={savingPayout}>
+                  {savingPayout ? <span className="spinner spinner-sm"></span> : 'Save Details'}
+                </button>
               </div>
             </div>
-            
-            {profile.phone && profile.network ? (
-              <div className="payout-configured">
-                <div className="configured-info">
-                  <span className="network-badge">{profile.network.toUpperCase()}</span>
-                  <span className="phone-number">{profile.phone}</span>
-                </div>
-                <button className="btn btn-ghost btn-sm" onClick={() => { setPhone(profile.phone); setNetwork(profile.network); }}>Edit</button>
-              </div>
-            ) : null}
-
-            {(!profile.phone || !profile.network || phone || network) && (
-              <div className="payout-form">
-                <div className="payout-row">
-                  <select className="form-select payout-network" value={network} onChange={e => setNetwork(e.target.value)}>
-                    <option value="">Select Network</option>
-                    <option value="mtn">MTN Mobile Money</option>
-                    <option value="vodafone">Telecel Cash</option>
-                    <option value="tigo">AT Money</option>
-                  </select>
-                  <input
-                    type="tel"
-                    className="form-input payout-phone"
-                    placeholder="Enter mobile number"
-                    value={phone}
-                    onChange={e => setPhone(e.target.value)}
-                  />
-                  <button className="btn btn-primary payout-save-btn" onClick={handleSavePayout} disabled={savingPayout}>
-                    {savingPayout ? <span className="spinner spinner-sm"></span> : 'Save Details'}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+          )}
+        </div>
 
         <div className="dashboard-content">
           <div className="content-header">
