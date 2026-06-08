@@ -107,7 +107,8 @@ export default function AdminDashboard() {
   }
 
   async function handleChangeRole(userId, newRole) {
-    if (!window.confirm(`Change this user's role to ${newRole.toUpperCase()}?`)) return;
+    const label = newRole === 'admin' ? 'ADMIN' : 'USER';
+    if (!window.confirm(`Change this user's role to ${label}?`)) return;
     setActionLoading(`user_${userId}`);
     try {
       const { error } = await supabase.from('profiles').update({ role: newRole }).eq('id', userId);
@@ -361,7 +362,7 @@ export default function AdminDashboard() {
                   <tr key={u.id}>
                     <td style={{ fontWeight: 500 }}>{u.full_name}</td>
                     <td className="text-muted">{u.email}</td>
-                    <td><span className={`badge ${u.role === 'admin' ? 'badge-escrow' : u.role === 'seller' ? 'badge-funded' : 'badge-pending'}`}>{u.role}</span></td>
+                    <td><span className={`badge ${u.role === 'admin' ? 'badge-escrow' : 'badge-pending'}`}>{u.role === 'admin' ? 'Admin' : 'User'}</span></td>
                     <td className="text-muted">{new Date(u.created_at).toLocaleDateString('en-GH', { year: 'numeric', month: 'short', day: 'numeric' })}</td>
                     <td>
                       <div className="admin-actions">
@@ -370,12 +371,11 @@ export default function AdminDashboard() {
                             <select 
                               className="form-input" 
                               style={{ padding: '6px 12px', fontSize: '0.85rem', width: 'auto' }}
-                              value={u.role}
-                              onChange={(e) => handleChangeRole(u.id, e.target.value)}
+                              value={u.role === 'admin' ? 'admin' : 'user'}
+                              onChange={(e) => handleChangeRole(u.id, e.target.value === 'admin' ? 'admin' : 'buyer')}
                               disabled={actionLoading === `user_${u.id}`}
                             >
-                              <option value="buyer">Buyer</option>
-                              <option value="seller">Seller</option>
+                              <option value="user">User</option>
                               <option value="admin">Admin</option>
                             </select>
                             <button className="admin-action-btn edit" onClick={() => openEditUser(u)} disabled={actionLoading === `edit_${u.id}`}>Edit</button>

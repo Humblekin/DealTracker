@@ -4,6 +4,8 @@ import toast from 'react-hot-toast';
 
 const AuthContext = createContext(null);
 
+const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -36,6 +38,31 @@ export function AuthProvider({ children }) {
       subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+
+    let timeoutId = setTimeout(() => {
+      toast.error('Session expired due to inactivity');
+      signOut();
+    }, INACTIVITY_TIMEOUT);
+
+    const handleActivity = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        toast.error('Session expired due to inactivity');
+        signOut();
+      }, INACTIVITY_TIMEOUT);
+    };
+
+    const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click', 'wheel'];
+    events.forEach(event => document.addEventListener(event, handleActivity));
+
+    return () => {
+      clearTimeout(timeoutId);
+      events.forEach(event => document.removeEventListener(event, handleActivity));
+    };
+  }, [user]);
 
   async function fetchProfile(userId) {
     try {

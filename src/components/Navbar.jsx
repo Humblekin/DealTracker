@@ -120,7 +120,6 @@ export default function Navbar({ isAdminLayout = false }) {
                 </div>
                 <div className="user-info">
                   <span className="user-name">{profile?.full_name || 'User'}</span>
-                  <span className="user-role">{profile?.role || 'user'}</span>
                 </div>
               </div>
 

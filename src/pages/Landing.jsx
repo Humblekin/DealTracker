@@ -68,8 +68,21 @@ export default function Landing() {
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
               </div>
               <div className="step-number">01</div>
-              <h3>Initiate Agreement</h3>
-              <p>Create a detailed transaction contract defining terms, conditions, and amounts. Full transparency from day one.</p>
+              <h3>Create & Share</h3>
+              <p>Set your deal terms, pick your role (buyer or seller), and share the unique link with your counterparty. No role selection needed at signup.</p>
+            </div>
+
+            <div className="step-connector">
+              <div className="connector-line"></div>
+            </div>
+
+            <div className="step-card">
+              <div className="step-icon-wrap">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><polyline points="17 11 19 13 23 9"></polyline></svg>
+              </div>
+              <div className="step-number">02</div>
+              <h3>Counterparty Joins</h3>
+              <p>The other party clicks the link and joins the deal — automatically assigned the opposite role. Both parties are now bound to the terms.</p>
             </div>
 
             <div className="step-connector">
@@ -80,9 +93,9 @@ export default function Landing() {
               <div className="step-icon-wrap">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
               </div>
-              <div className="step-number">02</div>
-              <h3>Secure Funding</h3>
-              <p>Funds are deposited into our audited escrow vault. The seller is instantly notified that capital is secured.</p>
+              <div className="step-number">03</div>
+              <h3>Buyer Funds Escrow</h3>
+              <p>Only the buyer pays. Funds are held securely by Moolre — neither party can access or withdraw them alone. The seller is notified instantly that capital is secured.</p>
             </div>
 
             <div className="step-connector">
@@ -93,9 +106,9 @@ export default function Landing() {
               <div className="step-icon-wrap">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
               </div>
-              <div className="step-number">03</div>
-              <h3>Verify & Disburse</h3>
-              <p>Upon buyer confirmation of satisfactory delivery, funds are instantly disbursed to the seller's account.</p>
+              <div className="step-number">04</div>
+              <h3>Confirm & Release</h3>
+              <p>Buyer confirms satisfactory delivery — funds are instantly released to the seller. If something goes wrong, either party can open a dispute for admin review.</p>
             </div>
           </div>
         </div>
