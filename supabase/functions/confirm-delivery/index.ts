@@ -174,7 +174,7 @@ serve(async (req) => {
       parseFloat(deal.amount),
       deal.seller.phone,
       deal.seller.network,
-      `SecureTrade payout for "${deal.title}"`,
+      `DealGuider payout for "${deal.title}"`,
       payoutRef
     )
 
@@ -241,7 +241,7 @@ serve(async (req) => {
       {
         user_id: deal.buyer_id,
         title: 'Deal Completed',
-        message: `The deal "${deal.title}" is complete. Thank you for using SecureTrade!`,
+        message: `The deal "${deal.title}" is complete. Thank you for using DealGuider!`,
         type: 'info',
         deal_id,
       },

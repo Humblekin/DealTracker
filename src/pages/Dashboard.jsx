@@ -72,7 +72,7 @@ export default function Dashboard() {
             <h1 className="dashboard-greeting">
               {new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 18 ? 'Good afternoon' : 'Good evening'}, <span className="gradient-text">{profile?.full_name || 'User'}</span>
             </h1>
-            <p className="dashboard-role">{profile?.role === 'admin' ? '⚙️ Admin Workspace' : '👤 SecureTrade User'}</p>
+            <p className="dashboard-role">{profile?.role === 'admin' ? '⚙️ Admin Workspace' : '👤 DealGuider User'}</p>
           </div>
           {profile?.role !== 'admin' && (
             <Link to="/deals/create" className="btn btn-primary btn-lg create-deal-btn">

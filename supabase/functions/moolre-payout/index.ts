@@ -142,7 +142,7 @@ serve(async (req) => {
       parseFloat(amount),
       phone,
       network,
-      narration || 'SecureTrade payout',
+      narration || 'DealGuider payout',
       reference
     )
 

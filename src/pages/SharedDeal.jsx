@@ -168,7 +168,7 @@ export default function SharedDeal() {
 
         <div className="secure-badge">
           <span className="secure-icon">🔒</span>
-          <span>Protected by SecureTrade escrow. Payment is held safely until both parties are satisfied.</span>
+          <span>Protected by DealGuider escrow. Payment is held safely until both parties are satisfied.</span>
         </div>
       </div>
     </div>

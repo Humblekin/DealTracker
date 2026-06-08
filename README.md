@@ -1,4 +1,4 @@
-# SecureTrade (MVP)
+# DealGuider (MVP)
 
 A trust-based escrow platform for safe peer-to-peer transactions in Ghana. Built with React (Vite), vanilla CSS, Supabase (Auth, PostgreSQL, Realtime), and **Moolre** for payments and payouts.
 

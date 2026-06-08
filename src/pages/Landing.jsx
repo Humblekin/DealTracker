@@ -190,9 +190,9 @@ export default function Landing() {
                   </linearGradient>
                 </defs>
               </svg>
-              <span>Secure<span className="brand-accent">Trade</span></span>
+              <span>Deal<span className="brand-accent">Guider</span></span>
             </div>
-            <p className="footer-copy">© {new Date().getFullYear()} SecureTrade Technologies. All rights reserved.</p>
+            <p className="footer-copy">© {new Date().getFullYear()} DealGuider Technologies. All rights reserved.</p>
           </div>
         </div>
       </footer>

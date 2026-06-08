@@ -1,5 +1,5 @@
 -- ============================================
--- SecureTrade – Supabase Database Schema
+-- DealGuider – Supabase Database Schema
 -- Run this in Supabase SQL Editor
 -- ============================================
 
