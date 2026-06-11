@@ -34,6 +34,7 @@ supabase secrets set MOOLRE_BASE_URL=https://api.moolre.com
 
 ### 5. Deploy Edge Functions
 ```bash
+supabase functions deploy join-deal
 supabase functions deploy moolre-init-payment
 supabase functions deploy moolre-webhook
 supabase functions deploy confirm-delivery
@@ -64,7 +65,8 @@ Buyer pays via Moolre
 ## Edge Functions
 
 | Function | Purpose |
-|---|---|
+|---|---|---|
+| `join-deal` | Counterparty joins a deal via share link, advances to AWAITING_PAYMENT |
 | `moolre-init-payment` | Creates Moolre payment request, returns checkout URL |
 | `moolre-webhook` | Receives Moolre payment confirmation, sets status to IN_ESCROW |
 | `confirm-delivery` | Buyer confirms delivery → triggers Moolre payout → COMPLETED |

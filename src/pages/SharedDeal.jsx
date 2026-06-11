@@ -9,6 +9,8 @@ import toast from 'react-hot-toast';
 import './DealDetails.css';
 import './SharedDeal.css';
 
+const EDGE_FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/join-deal`;
+
 export default function SharedDeal() {
   const { shareToken } = useParams();
   const { profile } = useAuth();
@@ -51,7 +53,11 @@ export default function SharedDeal() {
       toast.success(`You joined as ${deal.creator_role === 'BUYER' ? 'seller' : 'buyer'}!`);
       navigate(`/deals/${body.deal_id}`);
     } catch (err) {
-      toast.error(err.message);
+      if (err instanceof TypeError && err.message === 'Failed to fetch') {
+        toast.error('Unable to reach the server. The join-deal edge function may not be deployed.');
+      } else {
+        toast.error(err.message);
+      }
     } finally {
       setJoining(false);
     }

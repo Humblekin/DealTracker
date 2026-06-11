@@ -64,7 +64,7 @@ export default function Navbar({ isAdminLayout = false }) {
                 </defs>
               </svg>
             </div>
-            <span className="brand-text">Secure<span className="brand-accent">Trade</span></span>
+            <span className="brand-text">Deal<span className="brand-accent">Guider</span></span>
           </Link>
         )}
 
