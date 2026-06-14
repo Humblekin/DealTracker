@@ -39,11 +39,14 @@ export default function Landing() {
                   Open Free Account
                   <span className="btn-arrow">→</span>
                 </Link>
-                <Link to="/login" className="btn btn-secondary btn-lg">
+                <Link to="/login" className="btn btn-ghost btn-lg">
                   Sign In
                 </Link>
               </>
             )}
+            <Link to="/developer" className="btn btn-ghost btn-lg">
+              <span className="btn-icon">⎆</span> API for Developers
+            </Link>
           </div>
           <div className="hero-trust">
             <p>Powered by institutional infrastructure</p>
@@ -153,6 +156,46 @@ export default function Landing() {
               <h3>Enterprise Security</h3>
               <p>Bank-level encryption, rigorous rate limiting, and robust authentication safeguarding your account.</p>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* EaaS Section */}
+      <section className="eaas-section">
+        <div className="container">
+          <div className="eaas-content">
+            <div className="eaas-badge">For Developers</div>
+            <h2>Escrow-as-a-<span className="gradient-text">Service</span></h2>
+            <p className="eaas-subtitle">
+              Integrate DealGuider's escrow infrastructure into your e-commerce platform.
+              No need for your customers to create accounts — just API calls.
+            </p>
+            <div className="eaas-features">
+              <div className="eaas-feature">
+                <div className="eaas-feature-icon">🔑</div>
+                <div>
+                  <strong>API Key Authentication</strong>
+                  <p>Secure SHA-256 hashed keys with HMAC webhook verification.</p>
+                </div>
+              </div>
+              <div className="eaas-feature">
+                <div className="eaas-feature-icon">📦</div>
+                <div>
+                  <strong>Full Escrow Lifecycle</strong>
+                  <p>Create, fund, ship, and complete — every status updated via API or webhook.</p>
+                </div>
+              </div>
+              <div className="eaas-feature">
+                <div className="eaas-feature-icon">📱</div>
+                <div>
+                  <strong>Mobile Money Payouts</strong>
+                  <p>Funds are sent directly to the merchant's MoMo wallet via Moolre.</p>
+                </div>
+              </div>
+            </div>
+            <Link to="/developer" className="btn btn-primary">
+              Read API Docs <span className="btn-arrow">→</span>
+            </Link>
           </div>
         </div>
       </section>

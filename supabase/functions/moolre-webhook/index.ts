@@ -1,3 +1,10 @@
+// ---------------------------------------------------------------
+// Moolre Sandbox Webhook Handler
+// Called by Moolre sandbox after a payment is processed.
+// Verifies payment status with Moolre sandbox API
+// (POST /open/transact/status) before updating deal state.
+// Reuses existing sandbox credentials — no production changes.
+// ---------------------------------------------------------------
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.106.2'
 
@@ -6,13 +13,42 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const MOOLRE_API_USER = Deno.env.get('MOOLRE_API_USER')!
 const MOOLRE_PUBLIC_KEY = Deno.env.get('MOOLRE_PUBLIC_KEY')!
 const MOOLRE_ACCOUNT_NUMBER = Deno.env.get('MOOLRE_ACCOUNT_NUMBER')!
-const MOOLRE_BASE_URL = Deno.env.get('MOOLRE_BASE_URL') || 'https://api.moolre.com'
+const MOOLRE_BASE_URL = Deno.env.get('MOOLRE_BASE_URL') || 'https://api.moolre.com'  // Sandbox base URL
+
+const ALLOWED_ORIGINS = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:4173',
+  'https://dealtracker.vercel.app',
+  SUPABASE_URL,
+  'http://dealtracke.netlify.app',
+  'https://dealtracke.netlify.app',
+  'https://dealguider.netlify.app',
+]
+
+function corsHeaders(origin: string | null): Record<string, string> {
+  const allowed = ALLOWED_ORIGINS.includes(origin || '') ? origin! : ALLOWED_ORIGINS[0]
+  return {
+    'Access-Control-Allow-Origin': allowed,
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Max-Age': '86400',
+    'Content-Type': 'application/json',
+  }
+}
 
 serve(async (req) => {
+  const origin = req.headers.get('Origin')
+  const cors = corsHeaders(origin)
+
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: cors })
+  }
+
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
-      headers: { 'Content-Type': 'application/json' },
+      headers: cors,
     })
   }
 
@@ -24,7 +60,7 @@ serve(async (req) => {
     if (!reference) {
       return new Response(JSON.stringify({ error: 'Missing reference' }), {
         status: 400,
-        headers: { 'Content-Type': 'application/json' },
+        headers: cors,
       })
     }
 
@@ -59,7 +95,7 @@ serve(async (req) => {
     if (!paymentSuccessful) {
       return new Response(JSON.stringify({ received: true, processed: false, reason: 'Payment not successful' }), {
         status: 200,
-        headers: { 'Content-Type': 'application/json' },
+        headers: cors,
       })
     }
 
@@ -72,7 +108,7 @@ serve(async (req) => {
     if (findError || !deals || deals.length === 0) {
       return new Response(JSON.stringify({ error: 'No deal found for this reference' }), {
         status: 404,
-        headers: { 'Content-Type': 'application/json' },
+        headers: cors,
       })
     }
 
@@ -80,15 +116,28 @@ serve(async (req) => {
     if (deal.status !== 'AWAITING_PAYMENT') {
       return new Response(JSON.stringify({ received: true, processed: false, reason: `Deal is ${deal.status}` }), {
         status: 200,
-        headers: { 'Content-Type': 'application/json' },
+        headers: cors,
       })
     }
 
-    // Update deal to IN_ESCROW
-    await supabase.from('deals').update({
-      status: 'IN_ESCROW',
-      moolre_reference: moolreRef || reference,
-    }).eq('id', deal.id)
+    // Atomic update to IN_ESCROW — only if still AWAITING_PAYMENT (prevents race condition)
+    const { data: updatedDeal, error: updateError } = await supabase
+      .from('deals')
+      .update({
+        status: 'IN_ESCROW',
+        moolre_reference: moolreRef || reference,
+      })
+      .eq('id', deal.id)
+      .eq('status', 'AWAITING_PAYMENT')
+      .select('id')
+      .single()
+
+    if (updateError || !updatedDeal) {
+      return new Response(JSON.stringify({
+        received: true, processed: false,
+        reason: 'Deal was not in AWAITING_PAYMENT (concurrent update or already processed)',
+      }), { status: 200, headers: cors })
+    }
 
     // Record payment
     await supabase.from('payments').insert({
@@ -126,13 +175,13 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({ received: true, processed: true }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers: cors,
     })
 
   } catch (err) {
     return new Response(JSON.stringify({ error: err instanceof Error ? err.message : 'Internal server error' }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' },
+      headers: cors,
     })
   }
 })

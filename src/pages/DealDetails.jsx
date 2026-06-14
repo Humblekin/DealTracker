@@ -53,6 +53,8 @@ export default function DealDetails() {
     setActionLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
+      // Calls the existing Moolre sandbox integration to create a payment link.
+      // Edge function moolre-init-payment uses sandbox credentials — no production keys.
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/moolre-init-payment`,
         {
@@ -74,6 +76,45 @@ export default function DealDetails() {
     } catch (err) {
       console.error(err);
       toast.error(err.message || 'Something went wrong');
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function handleVerifyPayment() {
+    setActionLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      // Reuses the existing Moolre sandbox webhook to verify payment status.
+      // The webhook calls Moolre's /open/transact/status to confirm and
+      // updates the deal to IN_ESCROW if payment was successful.
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/moolre-webhook`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token}`,
+          },
+          body: JSON.stringify({
+            externalref: deal.payment_reference,
+            data: { reference: deal.moolre_reference || deal.payment_reference },
+          }),
+        }
+      );
+      const resBody = await res.json();
+      if (resBody.processed) {
+        toast.success('Payment confirmed! Funds are now in escrow.');
+        fetchDeal();
+      } else if (resBody.reason && resBody.reason !== 'Payment not successful') {
+        toast(resBody.reason, { icon: 'ℹ️' });
+        fetchDeal();
+      } else {
+        toast.error('Payment has not been completed yet. Please try again shortly.');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to check payment status. Please try again.');
     } finally {
       setActionLoading(false);
     }
@@ -258,11 +299,29 @@ export default function DealDetails() {
                 </div>
               )}
 
-              {deal.status === DEAL_STATUS.AWAITING_PAYMENT && isBuyer && (
+              {deal.status === DEAL_STATUS.AWAITING_PAYMENT && isBuyer && !deal.payment_reference && (
                 <div className="action-wrapper">
                   <p className="action-hint">Fund the escrow to secure this transaction.</p>
                   <button className="btn btn-primary btn-full btn-lg action-btn" onClick={handlePayment} disabled={actionLoading}>
                     {actionLoading ? <><span className="spinner spinner-sm"></span> Initializing...</> : <><span className="btn-icon">💳</span> Pay with Moolre</>}
+                  </button>
+                  <button className="btn btn-outline btn-full action-btn" onClick={handleCancelDeal} disabled={actionLoading}>
+                    Cancel Deal
+                  </button>
+                </div>
+              )}
+
+              {deal.status === DEAL_STATUS.AWAITING_PAYMENT && isBuyer && deal.payment_reference && (
+                <div className="action-wrapper">
+                  <div className="status-notice notice-warning" style={{marginBottom: '12px'}}>
+                    <div className="notice-icon">⏳</div>
+                    <div className="notice-content">
+                      <h4>Payment Processing</h4>
+                      <p>Your payment is still being processed. Please wait a moment and click the button below to check the status again.</p>
+                    </div>
+                  </div>
+                  <button className="btn btn-primary btn-full action-btn" onClick={handleVerifyPayment} disabled={actionLoading}>
+                    {actionLoading ? <><span className="spinner spinner-sm"></span> Checking...</> : 'Check Payment Status'}
                   </button>
                   <button className="btn btn-outline btn-full action-btn" onClick={handleCancelDeal} disabled={actionLoading}>
                     Cancel Deal
@@ -327,12 +386,22 @@ export default function DealDetails() {
                 </div>
               )}
 
-              {deal.status === DEAL_STATUS.DELIVERED && (
+              {deal.status === DEAL_STATUS.DELIVERED && isBuyer && (
                 <div className="status-notice notice-info">
                   <div className="notice-icon">📦</div>
                   <div className="notice-content">
                     <h4>Delivery Confirmed</h4>
-                    <p>Payout is being processed. Funds will arrive shortly.</p>
+                    <p>You confirmed delivery. The seller will receive payment shortly.</p>
+                  </div>
+                </div>
+              )}
+
+              {deal.status === DEAL_STATUS.DELIVERED && isSeller && (
+                <div className="status-notice notice-success">
+                  <div className="notice-icon">🎉</div>
+                  <div className="notice-content">
+                    <h4>Delivery Confirmed</h4>
+                    <p>The buyer confirmed delivery. Your payout is on its way to your mobile money.</p>
                   </div>
                 </div>
               )}

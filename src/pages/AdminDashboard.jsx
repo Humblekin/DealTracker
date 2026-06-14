@@ -29,25 +29,32 @@ export default function AdminDashboard() {
   const [deletingTarget, setDeletingTarget] = useState(null);
   const [deletingType, setDeletingType] = useState(null);
   const [editForm, setEditForm] = useState({});
+  const [merchants, setMerchants] = useState([]);
+  const [showRegisterMerchant, setShowRegisterMerchant] = useState(false);
+  const [merchantForm, setMerchantForm] = useState({ name: '', email: '', platform_url: '', webhook_url: '' });
+  const [generatedKey, setGeneratedKey] = useState(null);
 
   useEffect(() => { loadAll(); }, []);
 
   async function loadAll() {
     setLoading(true);
     try {
-      const [dealsRes, disputesRes, usersRes] = await Promise.all([
+      const [dealsRes, disputesRes, usersRes, merchantsRes] = await Promise.all([
         supabase.from('deals').select('*, buyer_profile:profiles!buyer_id(full_name, email), seller_profile:profiles!seller_id(full_name, email, phone, network)').order('created_at', { ascending: false }),
         supabase.from('disputes').select('*, deal:deals(title)').order('created_at', { ascending: false }),
         supabase.from('profiles').select('*').order('created_at', { ascending: false }),
+        supabase.from('merchants').select('*, api_keys:merchant_api_keys(key_prefix, created_at), transactions:merchant_transactions(id)').order('created_at', { ascending: false }),
       ]);
       
       if (dealsRes.error) throw dealsRes.error;
       if (disputesRes.error) throw disputesRes.error;
       if (usersRes.error) throw usersRes.error;
+      if (merchantsRes.error) throw merchantsRes.error;
       const d = dealsRes.data || [];
       setDeals(d);
       setDisputes(disputesRes.data || []);
       setUsers(usersRes.data || []);
+      setMerchants(merchantsRes.data || []);
       
       const paidDeals = d.filter(x => x.status !== 'AWAITING_PAYMENT');
       const platformProfit = paidDeals.reduce((s, x) => s + (parseFloat(parseFees(x).platformFee) || 0), 0);
@@ -201,6 +208,77 @@ export default function AdminDashboard() {
     finally { setActionLoading(null); }
   }
 
+  async function handleRegisterMerchant() {
+    if (!merchantForm.name || !merchantForm.email) {
+      toast.error('Name and email are required.');
+      return;
+    }
+    setActionLoading('register_merchant');
+    setGeneratedKey(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('merchant-register', {
+        body: {
+          name: merchantForm.name,
+          email: merchantForm.email,
+          platform_url: merchantForm.platform_url || null,
+          webhook_url: merchantForm.webhook_url || null,
+        },
+      })
+      if (error) throw error;
+      setGeneratedKey(data);
+      toast.success('Merchant registered successfully!');
+      setMerchantForm({ name: '', email: '', platform_url: '', webhook_url: '' });
+      loadAll();
+    } catch (err) {
+      console.error(err);
+      toast.error(err.message || 'Failed to register merchant.');
+    }
+    finally { setActionLoading(null); }
+  }
+
+  async function handleApproveMerchant(merchantId) {
+    if (!window.confirm('Approve this merchant application? They will be able to generate API keys.')) return;
+    setActionLoading(`approve_${merchantId}`);
+    try {
+      const { error } = await supabase.from('merchants').update({ status: 'ACTIVE', is_active: true }).eq('id', merchantId)
+      if (error) throw error;
+      toast.success('Merchant approved.');
+      loadAll();
+    } catch (err) { console.error(err); toast.error('Failed to approve merchant.'); }
+    finally { setActionLoading(null); }
+  }
+
+  async function handleRejectMerchant(merchantId) {
+    if (!window.confirm('Reject this merchant application? They will not be able to use the API.')) return;
+    setActionLoading(`reject_${merchantId}`);
+    try {
+      const { error } = await supabase.from('merchants').update({ status: 'REJECTED', is_active: false }).eq('id', merchantId)
+      if (error) throw error;
+      toast.success('Merchant rejected.');
+      loadAll();
+    } catch (err) { console.error(err); toast.error('Failed to reject merchant.'); }
+    finally { setActionLoading(null); }
+  }
+
+  const [showGenerateKey, setShowGenerateKey] = useState(null);
+
+  async function handleGenerateKey(merchantId) {
+    setActionLoading(`key_${merchantId}`);
+    try {
+      const { data, error } = await supabase.functions.invoke('merchant-generate-api-key', {
+        body: { merchant_id: merchantId },
+      })
+      if (error) throw error;
+      setGeneratedKey(data);
+      setShowGenerateKey(data);
+      loadAll();
+    } catch (err) {
+      console.error(err);
+      toast.error(err.message || 'Failed to generate API key.');
+    }
+    finally { setActionLoading(null); }
+  }
+
   if (loading) return <div className="loading-screen"><div className="spinner"></div></div>;
 
   return (
@@ -231,6 +309,12 @@ export default function AdminDashboard() {
             <>
               <h1>User Directory</h1>
               <p>View registered buyers, sellers, and admins</p>
+            </>
+          )}
+          {tab === 'merchants' && (
+            <>
+              <h1>Merchant Platforms</h1>
+              <p>Manage e-commerce platforms integrated via Escrow-as-a-Service</p>
             </>
           )}
         </div>
@@ -392,7 +476,176 @@ export default function AdminDashboard() {
             </table>
           </div>
         )}
+
+        {tab === 'merchants' && (
+          <>
+            <div className="section-header-row">
+              <h3>Registered Platforms ({merchants.length})</h3>
+              <button className="btn btn-primary" onClick={() => { setShowRegisterMerchant(true); setGeneratedKey(null); }}>
+                + Register Platform
+              </button>
+            </div>
+
+            <div className="table-wrapper">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Platform</th>
+                    <th>Email</th>
+                    <th>Status</th>
+                    <th>API Keys</th>
+                    <th>Transactions</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {merchants.map(m => (
+                    <tr key={m.id}>
+                      <td style={{ fontWeight: 600 }}>{m.name}</td>
+                      <td className="text-muted">{m.email}</td>
+                      <td>
+                        <span className={`badge ${
+                          m.status === 'ACTIVE' ? 'badge-escrow' :
+                          m.status === 'PENDING' ? 'badge-dispute' :
+                          'badge-pending'
+                        }`}>
+                          {m.status || 'PENDING'}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="badge badge-pending">
+                          {m.api_keys?.length || 0} key{(m.api_keys?.length || 0) !== 1 ? 's' : ''}
+                        </span>
+                      </td>
+                      <td style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+                        {m.transactions?.length || 0}
+                      </td>
+                      <td className="text-muted">
+                        {new Date(m.created_at).toLocaleDateString('en-GH', { year: 'numeric', month: 'short', day: 'numeric' })}
+                      </td>
+                      <td>
+                        <div className="admin-actions">
+                          {m.status === 'PENDING' && (
+                            <>
+                              <button className="btn btn-sm btn-success" onClick={() => handleApproveMerchant(m.id)} disabled={actionLoading === `approve_${m.id}`}>
+                                {actionLoading === `approve_${m.id}` ? '...' : 'Approve'}
+                              </button>
+                              <button className="btn btn-sm btn-danger" onClick={() => handleRejectMerchant(m.id)} disabled={actionLoading === `reject_${m.id}`}>
+                                {actionLoading === `reject_${m.id}` ? '...' : 'Reject'}
+                              </button>
+                            </>
+                          )}
+                          {m.status === 'ACTIVE' && (
+                            <button className="btn btn-sm btn-primary" onClick={() => handleGenerateKey(m.id)} disabled={actionLoading === `key_${m.id}`}>
+                              {actionLoading === `key_${m.id}` ? '...' : 'Generate Key'}
+                            </button>
+                          )}
+                          {m.status === 'REJECTED' && (
+                            <span className="action-done">Rejected</span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {merchants.length === 0 && (
+                    <tr><td colSpan={7} className="empty-cell">No merchant platforms registered yet</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </div>
+
+      {(showRegisterMerchant || showGenerateKey) && (
+        <div className="modal-overlay" onClick={() => { setShowRegisterMerchant(false); setShowGenerateKey(null); setGeneratedKey(null); }}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 500 }}>
+            <div className="modal-header">
+              <h2>{showGenerateKey ? 'API Key Generated' : generatedKey ? 'Platform Registered' : 'Register E-Commerce Platform'}</h2>
+              <button className="modal-close" onClick={() => { setShowRegisterMerchant(false); setShowGenerateKey(null); setGeneratedKey(null); }}>&times;</button>
+            </div>
+            {generatedKey ? (
+              <div className="modal-body">
+                <div className="form-group">
+                  <label>Platform</label>
+                  <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>{showGenerateKey ? generatedKey.merchant_id : generatedKey.merchant?.name || 'Merchant'}</div>
+                </div>
+                <div className="form-group">
+                  <label>API Key (shown once)</label>
+                  <div className="api-key-display">
+                    <code className="api-key-code">{generatedKey.api_key}</code>
+                    <button
+                      className="btn btn-sm btn-ghost"
+                      onClick={() => {
+                        navigator.clipboard.writeText(generatedKey.api_key);
+                        toast.success('API key copied!');
+                      }}
+                    >
+                      Copy
+                    </button>
+                  </div>
+                  <p className="confirm-sub" style={{ color: 'var(--color-danger)', fontWeight: 600 }}>
+                    Store this key securely. It will not be shown again.
+                  </p>
+                </div>
+                <button className="btn btn-primary btn-full" onClick={() => { setShowRegisterMerchant(false); setShowGenerateKey(null); setGeneratedKey(null); }}>
+                  Done
+                </button>
+              </div>
+            ) : (
+              <div className="modal-body">
+                <div className="form-group">
+                  <label>Platform Name *</label>
+                  <input
+                    className="form-input"
+                    value={merchantForm.name}
+                    onChange={e => setMerchantForm({ ...merchantForm, name: e.target.value })}
+                    placeholder="e.g. Shopify Store"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Contact Email *</label>
+                  <input
+                    className="form-input"
+                    type="email"
+                    value={merchantForm.email}
+                    onChange={e => setMerchantForm({ ...merchantForm, email: e.target.value })}
+                    placeholder="store@example.com"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Platform URL</label>
+                  <input
+                    className="form-input"
+                    value={merchantForm.platform_url}
+                    onChange={e => setMerchantForm({ ...merchantForm, platform_url: e.target.value })}
+                    placeholder="https://store.example.com"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Webhook URL</label>
+                  <input
+                    className="form-input"
+                    value={merchantForm.webhook_url}
+                    onChange={e => setMerchantForm({ ...merchantForm, webhook_url: e.target.value })}
+                    placeholder="https://store.example.com/webhook"
+                  />
+                  <p className="confirm-sub">DealGuider will send escrow events here (funded, shipped, completed).</p>
+                </div>
+              </div>
+            )}
+            {!generatedKey && (
+              <div className="modal-footer">
+                <button className="btn btn-ghost" onClick={() => setShowRegisterMerchant(false)}>Cancel</button>
+                <button className="btn btn-primary" onClick={handleRegisterMerchant} disabled={actionLoading === 'register_merchant'}>
+                  {actionLoading === 'register_merchant' ? 'Registering...' : 'Register Platform'}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {deletingTarget && (
         <div className="modal-overlay" onClick={() => setDeletingTarget(null)}>

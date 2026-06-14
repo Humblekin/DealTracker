@@ -149,6 +149,7 @@ export default function Navbar({ isAdminLayout = false }) {
 
         {!user && (
           <div className="navbar-right">
+            <Link to="/developer" className="nav-link dev-link">API</Link>
             <Link to="/login" className="btn btn-ghost">Login</Link>
             <Link to="/register" className="btn btn-primary btn-sm">Get Started</Link>
           </div>
@@ -167,6 +168,7 @@ function getNavLinks(role) {
     return [
       ...common,
       { path: '/admin', label: 'Admin Panel', icon: '⚙️' },
+      { path: '/admin/merchants', label: 'Merchants', icon: '🏪' },
       { path: '/transactions', label: 'Transactions', icon: '📋' },
     ];
   }

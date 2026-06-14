@@ -1,3 +1,10 @@
+// ---------------------------------------------------------------
+// Confirm Delivery — triggers Moolre Sandbox Payout
+// Buyer confirms delivery, then automatically sends payout to
+// seller via the Moolre sandbox API (POST /open/transact/transfer).
+// Uses the same sandbox credentials as moolre-payout.
+// Falls back to admin notification if auto-payout fails.
+// ---------------------------------------------------------------
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.106.2'
 
@@ -6,7 +13,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const MOOLRE_API_USER = Deno.env.get('MOOLRE_API_USER')!
 const MOOLRE_PRIVATE_KEY = Deno.env.get('MOOLRE_PRIVATE_KEY')!
 const MOOLRE_ACCOUNT_NUMBER = Deno.env.get('MOOLRE_ACCOUNT_NUMBER')!
-const MOOLRE_BASE_URL = Deno.env.get('MOOLRE_BASE_URL') || 'https://api.moolre.com'
+const MOOLRE_BASE_URL = Deno.env.get('MOOLRE_BASE_URL') || 'https://api.moolre.com'  // Sandbox base URL
 
 const ALLOWED_ORIGINS = [
   'http://localhost:5173',
@@ -161,7 +168,20 @@ serve(async (req) => {
       })
     }
 
-    await supabase.from('deals').update({ status: 'DELIVERED' }).eq('id', deal_id)
+    // Atomic status transition: only advance to DELIVERED if still IN_ESCROW
+    const { data: deliveredDeal, error: deliverError } = await supabase
+      .from('deals')
+      .update({ status: 'DELIVERED' })
+      .eq('id', deal_id)
+      .eq('status', 'IN_ESCROW')
+      .select('id')
+      .single()
+
+    if (deliverError || !deliveredDeal) {
+      return new Response(JSON.stringify({
+        error: 'Deal is no longer in IN_ESCROW status (possible concurrent update)',
+      }), { status: 409, headers: cors })
+    }
 
     await supabase.from('audit_logs').insert({
       deal_id,
@@ -169,6 +189,22 @@ serve(async (req) => {
       actor_id: user.id,
       details: { amount: deal.amount },
     })
+
+    // Prevent double payout: check if funds were already transferred
+    const { data: existingPayout } = await supabase
+      .from('audit_logs')
+      .select('id, details')
+      .eq('deal_id', deal_id)
+      .eq('action', 'FUNDS_TRANSFERRED')
+      .limit(1)
+
+    if (existingPayout && existingPayout.length > 0) {
+      await supabase.from('deals').update({ status: 'COMPLETED' }).eq('id', deal_id)
+      return new Response(JSON.stringify({
+        success: true,
+        message: 'Payout was already processed for this deal.',
+      }), { status: 200, headers: cors })
+    }
 
     const payoutRef = `ST-PO-${deal_id}-${Date.now()}`
     const payoutResult = await sendPayout(
@@ -222,7 +258,7 @@ serve(async (req) => {
       })
     }
 
-    await supabase.from('deals').update({ status: 'COMPLETED' }).eq('id', deal_id)
+    await supabase.from('deals').update({ status: 'COMPLETED' }).eq('id', deal_id).eq('status', 'DELIVERED')
 
     await supabase.from('audit_logs').insert({
       deal_id,

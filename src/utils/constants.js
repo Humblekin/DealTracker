@@ -26,6 +26,9 @@ export const STATUS_CONFIG = {
   CANCELLED: { label: 'Cancelled', color: '#dc2626', bg: 'rgba(220,38,38,0.15)' },
 };
 
+// Moolre sandbox public key — reused from existing sandbox integration.
+// Set via VITE_MOOLRE_PUBLIC_KEY in .env. Same key is used server-side
+// by edge functions for payment initiation and webhook verification.
 export const MOOLRE_PUBLIC_KEY = import.meta.env.VITE_MOOLRE_PUBLIC_KEY || '';
 
 export const CURRENCY = 'GHS';

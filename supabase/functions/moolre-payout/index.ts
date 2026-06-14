@@ -1,3 +1,10 @@
+// ---------------------------------------------------------------
+// Moolre Sandbox Admin Payout
+// Admin-only function to manually trigger a payout via the Moolre
+// sandbox API (POST /open/transact/transfer).
+// Reuses existing sandbox X-API-USER + X-API-KEY credentials.
+// No production/live endpoints or keys are used.
+// ---------------------------------------------------------------
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.106.2'
 
@@ -6,7 +13,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const MOOLRE_API_USER = Deno.env.get('MOOLRE_API_USER')!
 const MOOLRE_PRIVATE_KEY = Deno.env.get('MOOLRE_PRIVATE_KEY')!
 const MOOLRE_ACCOUNT_NUMBER = Deno.env.get('MOOLRE_ACCOUNT_NUMBER')!
-const MOOLRE_BASE_URL = Deno.env.get('MOOLRE_BASE_URL') || 'https://api.moolre.com'
+const MOOLRE_BASE_URL = Deno.env.get('MOOLRE_BASE_URL') || 'https://api.moolre.com'  // Sandbox base URL
 
 const ALLOWED_ORIGINS = [
   'http://localhost:5173',
@@ -138,9 +145,52 @@ serve(async (req) => {
       })
     }
 
+    // Validate deal exists and is in a payout-eligible state
+    const { data: deal, error: dealError } = await supabase
+      .from('deals')
+      .select('id, status, amount, net_amount')
+      .eq('id', deal_id)
+      .single()
+
+    if (dealError || !deal) {
+      return new Response(JSON.stringify({ error: 'Deal not found' }), {
+        status: 404,
+        headers: cors,
+      })
+    }
+
+    if (!['DELIVERED', 'COMPLETED'].includes(deal.status)) {
+      return new Response(JSON.stringify({
+        error: `Cannot pay out. Deal is in "${deal.status}" status. Expected DELIVERED or COMPLETED.`,
+      }), { status: 400, headers: cors })
+    }
+
+    // Validate amount matches deal
+    const validatedAmount = parseFloat(amount)
+    const dealAmount = parseFloat(deal.net_amount || deal.amount)
+    if (Math.abs(validatedAmount - dealAmount) > 0.01) {
+      return new Response(JSON.stringify({
+        error: `Amount ${validatedAmount.toFixed(2)} does not match deal amount ${dealAmount.toFixed(2)}`,
+      }), { status: 400, headers: cors })
+    }
+
+    // Prevent double payout
+    const { data: existingPayout } = await supabase
+      .from('audit_logs')
+      .select('id')
+      .eq('deal_id', deal_id)
+      .in('action', ['FUNDS_TRANSFERRED', 'PAYOUT_SENT', 'MERCHANT_FUNDS_RELEASED'])
+      .limit(1)
+
+    if (existingPayout && existingPayout.length > 0) {
+      return new Response(JSON.stringify({
+        error: 'A payout has already been processed for this deal (double payout prevented)',
+      }), { status: 409, headers: cors })
+    }
+
     const reference = `PO-${deal_id}-${Date.now()}`
     const result = await sendPayout(
-      parseFloat(amount),
+      validatedAmount,
       phone,
       network,
       narration || 'DealGuider payout',
@@ -148,11 +198,19 @@ serve(async (req) => {
     )
 
     if (!result.success) {
+      await supabase.from('audit_logs').insert({
+        deal_id,
+        action: 'ADMIN_PAYOUT_FAILED',
+        actor_id: user.id,
+        details: { error: result.error, reference, amount, phone, network },
+      })
       return new Response(JSON.stringify({ error: result.error }), {
         status: 502,
         headers: cors,
       })
     }
+
+    await supabase.from('deals').update({ status: 'COMPLETED' }).eq('id', deal_id).eq('status', 'DELIVERED')
 
     await supabase.from('audit_logs').insert({
       deal_id,

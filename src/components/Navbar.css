@@ -110,6 +110,20 @@
   gap: 10px;
 }
 
+.dev-link {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.dev-link:hover {
+  color: var(--accent-primary);
+  background: rgba(0, 212, 170, 0.06);
+}
+
 .navbar-user {
   display: flex;
   align-items: center;

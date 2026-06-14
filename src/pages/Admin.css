@@ -189,3 +189,23 @@
   font-size: 0.85rem;
   color: var(--text-muted);
 }
+
+/* ---- API Key Display ---- */
+.api-key-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+}
+
+.api-key-code {
+  flex: 1;
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 0.78rem;
+  color: var(--accent-primary);
+  word-break: break-all;
+  user-select: all;
+}

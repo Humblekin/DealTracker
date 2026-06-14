@@ -12,6 +12,7 @@ import DealDetails from './pages/DealDetails';
 import SharedDeal from './pages/SharedDeal';
 import Transactions from './pages/Transactions';
 import AdminDashboard from './pages/AdminDashboard';
+import DeveloperAPI from './pages/DeveloperAPI';
 
 export default function App() {
   return (
@@ -37,6 +38,7 @@ export default function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/deal/:shareToken" element={<SharedDeal />} />
+            <Route path="/developer" element={<DeveloperAPI />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/deals/create" element={<ProtectedRoute><CreateDeal /></ProtectedRoute>} />
             <Route path="/deals/:id" element={<ProtectedRoute><DealDetails /></ProtectedRoute>} />

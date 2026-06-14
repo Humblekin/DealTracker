@@ -1,3 +1,11 @@
+// ---------------------------------------------------------------
+// Moolre Sandbox Payment Initiation
+// Uses the existing Moolre sandbox API (MOOLRE_BASE_URL defaults
+// to the sandbox environment). Reuses sandbox API keys from env.
+// Endpoint:  POST /embed/link
+// Auth:      X-API-USER + X-API-PUBKEY
+// Integration is kept unchanged — no production/live credentials.
+// ---------------------------------------------------------------
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.106.2'
 
@@ -6,7 +14,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const MOOLRE_API_USER = Deno.env.get('MOOLRE_API_USER')!
 const MOOLRE_PUBLIC_KEY = Deno.env.get('MOOLRE_PUBLIC_KEY')!
 const MOOLRE_ACCOUNT_NUMBER = Deno.env.get('MOOLRE_ACCOUNT_NUMBER')!
-const MOOLRE_BASE_URL = Deno.env.get('MOOLRE_BASE_URL') || 'https://api.moolre.com'
+const MOOLRE_BASE_URL = Deno.env.get('MOOLRE_BASE_URL') || 'https://api.moolre.com'  // Sandbox base URL
 
 const ALLOWED_ORIGINS = [
   'http://localhost:5173',
