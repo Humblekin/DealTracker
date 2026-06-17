@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { Shield, Zap, Scale, BarChart3, ScrollText, Lock, Key, Package, Smartphone } from 'lucide-react';
 import './Landing.css';
 
 export default function Landing() {
@@ -127,32 +128,32 @@ export default function Landing() {
 
           <div className="features-grid">
             <div className="feature-card glass-card">
-              <div className="feature-icon">🛡️</div>
+              <div className="feature-icon"><Shield size={24} /></div>
               <h3>Automated Escrow Vault</h3>
               <p>Zero manual intervention. Funds are programmatically secured and released only upon verified milestone completion.</p>
             </div>
             <div className="feature-card glass-card">
-              <div className="feature-icon">⚡</div>
+              <div className="feature-icon"><Zap size={24} /></div>
               <h3>Real-time Settlement</h3>
               <p>Instant disbursements via API integration with major telecommunications and banking networks in Ghana.</p>
             </div>
             <div className="feature-card glass-card">
-              <div className="feature-icon">⚖️</div>
+              <div className="feature-icon"><Scale size={24} /></div>
               <h3>Arbitration Protocol</h3>
               <p>Structured dispute resolution framework managed by impartial administrators within guaranteed SLAs.</p>
             </div>
             <div className="feature-card glass-card">
-              <div className="feature-icon">📊</div>
+              <div className="feature-icon"><BarChart3 size={24} /></div>
               <h3>Transparent Economics</h3>
               <p>Clear, deterministic fee structures. No hidden charges. Complete visibility into capital flows.</p>
             </div>
             <div className="feature-card glass-card">
-              <div className="feature-icon">📜</div>
+              <div className="feature-icon"><ScrollText size={24} /></div>
               <h3>Immutable Audit Trail</h3>
               <p>Comprehensive logging of all state changes, providing undeniable proof of actions for both parties.</p>
             </div>
             <div className="feature-card glass-card">
-              <div className="feature-icon">🔐</div>
+              <div className="feature-icon"><Lock size={24} /></div>
               <h3>Enterprise Security</h3>
               <p>Bank-level encryption, rigorous rate limiting, and robust authentication safeguarding your account.</p>
             </div>
@@ -172,21 +173,21 @@ export default function Landing() {
             </p>
             <div className="eaas-features">
               <div className="eaas-feature">
-                <div className="eaas-feature-icon">🔑</div>
+                <div className="eaas-feature-icon"><Key size={20} /></div>
                 <div>
                   <strong>API Key Authentication</strong>
                   <p>Secure SHA-256 hashed keys with HMAC webhook verification.</p>
                 </div>
               </div>
               <div className="eaas-feature">
-                <div className="eaas-feature-icon">📦</div>
+                <div className="eaas-feature-icon"><Package size={20} /></div>
                 <div>
                   <strong>Full Escrow Lifecycle</strong>
                   <p>Create, fund, ship, and complete — every status updated via API or webhook.</p>
                 </div>
               </div>
               <div className="eaas-feature">
-                <div className="eaas-feature-icon">📱</div>
+                <div className="eaas-feature-icon"><Smartphone size={20} /></div>
                 <div>
                   <strong>Mobile Money Payouts</strong>
                   <p>Funds are sent directly to the merchant's MoMo wallet via Moolre.</p>

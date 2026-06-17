@@ -406,6 +406,72 @@
   margin: 0 auto;
 }
 
+.apply-key-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #0f172a;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  margin-top: 4px;
+}
+
+.apply-key-box code {
+  flex: 1;
+  font-size: 0.78rem;
+  word-break: break-all;
+  line-height: 1.5;
+}
+
+.apply-credentials {
+  text-align: left;
+  max-width: 480px;
+  margin: 16px auto;
+}
+
+.apply-credentials .form-group {
+  margin-bottom: 12px;
+}
+
+.apply-credentials label {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 2px;
+}
+
+/* Merchant Portal */
+.merchant-portal {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  margin-top: 28px;
+}
+
+.merchant-portal h3 {
+  margin: 0 0 6px;
+  font-family: var(--font-display);
+}
+
+.merchant-portal > p {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin-bottom: 20px;
+}
+
+.merchant-status-line {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+.merchant-status-line .badge {
+  margin-left: 6px;
+}
+
 @media (max-width: 600px) {
   .apply-form-row {
     grid-template-columns: 1fr;

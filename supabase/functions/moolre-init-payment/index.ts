@@ -140,7 +140,9 @@ serve(async (req) => {
 
     const moolreData = await moolreRes.json()
 
-    if (!moolreRes.ok || moolreData.status !== 1) {
+    const isStatusOk = moolreData.status === 1 || moolreData.status === '1'
+
+    if (!moolreRes.ok || !isStatusOk) {
       await supabase.from('audit_logs').insert({
         deal_id: deal.id,
         action: 'PAYMENT_INIT_FAILED',
@@ -156,7 +158,7 @@ serve(async (req) => {
       })
     }
 
-    const paymentUrl = moolreData.data?.authorization_url
+    const paymentUrl = moolreData.data?.authorization_url || moolreData.data?.checkout_url || moolreData.data?.payment_url
     const moolreRef = moolreData.data?.reference || externalRef
 
     await supabase.from('deals').update({

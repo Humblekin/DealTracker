@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import DealCard from '../components/DealCard';
 import { formatGHS } from '../utils/fees';
 import { DEAL_STATUS } from '../utils/constants';
+import { Settings, User, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import './Dashboard.css';
 
@@ -72,11 +73,11 @@ export default function Dashboard() {
             <h1 className="dashboard-greeting">
               {new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 18 ? 'Good afternoon' : 'Good evening'}, <span className="gradient-text">{profile?.full_name || 'User'}</span>
             </h1>
-            <p className="dashboard-role">{profile?.role === 'admin' ? '⚙️ Admin Workspace' : '👤 DealGuider User'}</p>
+            <p className="dashboard-role">{profile?.role === 'admin' ? <><Settings size={14} /> Admin Workspace</> : <><User size={14} /> DealGuider User</>}</p>
           </div>
           {profile?.role !== 'admin' && (
             <Link to="/deals/create" className="btn btn-primary btn-lg create-deal-btn">
-              <span className="btn-icon">＋</span> New Deal
+              <span className="btn-icon"><Plus size={16} /></span> New Deal
             </Link>
           )}
         </div>

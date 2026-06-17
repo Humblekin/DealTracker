@@ -44,7 +44,8 @@ export async function initPayment(params: InitPaymentParams): Promise<InitPaymen
 
   const data = await res.json()
 
-  if (!res.ok || data.status !== 1) {
+  const isStatusOk = data.status === 1 || data.status === '1'
+  if (!res.ok || !isStatusOk) {
     return {
       success: false,
       error: data.message || 'Failed to initialize payment with Moolre',
@@ -53,7 +54,7 @@ export async function initPayment(params: InitPaymentParams): Promise<InitPaymen
 
   return {
     success: true,
-    authorization_url: data.data?.authorization_url,
+    authorization_url: data.data?.authorization_url || data.data?.checkout_url || data.data?.payment_url,
     reference: data.data?.reference || params.externalRef,
   }
 }

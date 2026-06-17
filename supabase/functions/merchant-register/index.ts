@@ -56,6 +56,7 @@ serve(async (req) => {
         webhook_url: webhook_url || null,
         status: 'ACTIVE',
         is_active: true,
+        settings: { access_token: crypto.randomUUID().replace(/-/g, '') },
       })
       .select()
       .single()
@@ -95,6 +96,8 @@ serve(async (req) => {
       },
     })
 
+    const settings = JSON.parse(merchant.settings as string || '{}') as Record<string, unknown>
+
     return new Response(JSON.stringify({
       success: true,
       merchant: {
@@ -106,6 +109,7 @@ serve(async (req) => {
         webhook_secret: merchant.webhook_secret,
       },
       api_key: apiKey,
+      access_token: settings.access_token as string,
       message: 'Store this API key securely. It will not be shown again.',
     }), { status: 201, headers: cors })
 

@@ -168,6 +168,8 @@ serve(async (req) => {
       })
     }
 
+    const payoutAmount = parseFloat(deal.net_amount || deal.amount)
+
     // Atomic status transition: only advance to DELIVERED if still IN_ESCROW
     const { data: deliveredDeal, error: deliverError } = await supabase
       .from('deals')
@@ -187,7 +189,7 @@ serve(async (req) => {
       deal_id,
       action: 'DELIVERY_CONFIRMED',
       actor_id: user.id,
-      details: { amount: deal.amount },
+      details: { amount: deal.amount, payout_amount: payoutAmount },
     })
 
     // Prevent double payout: check if funds were already transferred
@@ -208,7 +210,7 @@ serve(async (req) => {
 
     const payoutRef = `ST-PO-${deal_id}-${Date.now()}`
     const payoutResult = await sendPayout(
-      parseFloat(deal.amount),
+      payoutAmount,
       deal.seller.phone,
       deal.seller.network,
       `DealGuider payout for "${deal.title}"`,
@@ -239,7 +241,7 @@ serve(async (req) => {
       const adminNotifs = (admins || []).map(a => ({
         user_id: a.id,
         title: 'Payout Failed',
-        message: `Auto-payout failed for deal #${deal_id} (GH₵ ${parseFloat(deal.amount).toFixed(2)}). Manual intervention required.`,
+        message: `Auto-payout failed for deal #${deal_id} (GH₵ ${payoutAmount.toFixed(2)}). Manual intervention required.`,
         type: 'payment',
         deal_id,
       }))
@@ -264,7 +266,7 @@ serve(async (req) => {
       deal_id,
       action: 'FUNDS_TRANSFERRED',
       actor_id: user.id,
-      details: { reference: payoutResult.reference, amount: deal.amount },
+      details: { reference: payoutResult.reference, amount: payoutAmount },
     })
 
     await supabase.from('notifications').insert([

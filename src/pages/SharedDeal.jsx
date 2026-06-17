@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import StatusBadge from '../components/StatusBadge';
 import { formatGHS } from '../utils/fees';
 import { DEAL_STATUS } from '../utils/constants';
+import { Check, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import './DealDetails.css';
 import './SharedDeal.css';
@@ -135,7 +136,7 @@ export default function SharedDeal() {
 
             {isCounterparty && (
               <div className="joined-message">
-                <span className="joined-icon">✓</span>
+                <span className="joined-icon"><Check size={16} /></span>
                 You already joined this deal as {deal.creator_role === 'BUYER' ? 'seller' : 'buyer'}
               </div>
             )}
@@ -159,7 +160,7 @@ export default function SharedDeal() {
 
             {!isCreator && !isCounterparty && deal.status !== DEAL_STATUS.AWAITING_COUNTERPARTY && (
               <div className="joined-message">
-                <span className="joined-icon">✓</span>
+                <span className="joined-icon"><Check size={16} /></span>
                 Counterparty Joined
               </div>
             )}
@@ -173,7 +174,7 @@ export default function SharedDeal() {
         </div>
 
         <div className="secure-badge">
-          <span className="secure-icon">🔒</span>
+          <span className="secure-icon"><Lock size={16} /></span>
           <span>Protected by DealGuider escrow. Payment is held safely until both parties are satisfied.</span>
         </div>
       </div>

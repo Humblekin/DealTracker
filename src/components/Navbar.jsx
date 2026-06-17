@@ -2,6 +2,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
+import { LayoutDashboard, Settings, Store, ClipboardList, Plus } from 'lucide-react';
 import './Navbar.css';
 
 export default function Navbar({ isAdminLayout = false }) {
@@ -161,21 +162,21 @@ export default function Navbar({ isAdminLayout = false }) {
 
 function getNavLinks(role) {
   const common = [
-    { path: '/dashboard', label: 'Dashboard', icon: '📊' },
+    { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
   ];
 
   if (role === 'admin') {
     return [
       ...common,
-      { path: '/admin', label: 'Admin Panel', icon: '⚙️' },
-      { path: '/admin/merchants', label: 'Merchants', icon: '🏪' },
-      { path: '/transactions', label: 'Transactions', icon: '📋' },
+      { path: '/admin', label: 'Admin Panel', icon: <Settings size={18} /> },
+      { path: '/admin/merchants', label: 'Merchants', icon: <Store size={18} /> },
+      { path: '/transactions', label: 'Transactions', icon: <ClipboardList size={18} /> },
     ];
   }
 
   return [
     ...common,
-    { path: '/deals/create', label: 'New Deal', icon: '➕' },
-    { path: '/transactions', label: 'Transactions', icon: '📋' },
+    { path: '/deals/create', label: 'New Deal', icon: <Plus size={18} /> },
+    { path: '/transactions', label: 'Transactions', icon: <ClipboardList size={18} /> },
   ];
 }

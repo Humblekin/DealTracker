@@ -28,6 +28,8 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Invalid email address' }), { status: 400, headers: cors })
     }
 
+    const accessToken = crypto.randomUUID().replace(/-/g, '')
+
     const { data: merchant, error: merchantError } = await supabase
       .from('merchants')
       .insert({
@@ -37,7 +39,7 @@ serve(async (req) => {
         webhook_url: null,
         status: 'PENDING',
         is_active: false,
-        settings: { description: description || '' },
+        settings: { description: description || '', access_token: accessToken },
       })
       .select()
       .single()
@@ -54,7 +56,9 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({
       success: true,
-      message: 'Application submitted successfully. An admin will review and approve your access.',
+      application_id: merchant.id,
+      access_token: accessToken,
+      message: 'Application submitted successfully! Save your Application ID and Access Token to generate API keys once approved.',
     }), { status: 201, headers: cors })
 
   } catch (err) {

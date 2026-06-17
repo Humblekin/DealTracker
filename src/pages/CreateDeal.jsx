@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import FeeBreakdown from '../components/FeeBreakdown';
 import { calculateFees, formatGHS } from '../utils/fees';
+import { ShoppingCart, Package } from 'lucide-react';
 import toast from 'react-hot-toast';
 import './CreateDeal.css';
 
@@ -70,7 +71,7 @@ export default function CreateDeal() {
                     className={`role-btn ${creatorRole === 'BUYER' ? 'active' : ''}`}
                     onClick={() => setCreatorRole('BUYER')}
                   >
-                    <span className="role-icon">🛒</span>
+                    <span className="role-icon"><ShoppingCart size={20} /></span>
                     <span className="role-label">Buyer</span>
                     <span className="role-desc">I want to purchase something</span>
                   </button>
@@ -79,7 +80,7 @@ export default function CreateDeal() {
                     className={`role-btn ${creatorRole === 'SELLER' ? 'active' : ''}`}
                     onClick={() => setCreatorRole('SELLER')}
                   >
-                    <span className="role-icon">📦</span>
+                    <span className="role-icon"><Package size={20} /></span>
                     <span className="role-label">Seller</span>
                     <span className="role-desc">I want to sell something</span>
                   </button>

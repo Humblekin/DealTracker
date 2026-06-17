@@ -68,41 +68,10 @@ serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     })
 
-    // Verify payment status with Moolre API
-    const verifyRes = await fetch(`${MOOLRE_BASE_URL}/open/transact/status`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-API-USER': MOOLRE_API_USER,
-        'X-API-PUBKEY': MOOLRE_PUBLIC_KEY,
-      },
-      body: JSON.stringify({
-        type: 1,
-        idtype: '1',
-        id: reference,
-        accountnumber: MOOLRE_ACCOUNT_NUMBER,
-      }),
-    })
-    const verifyData = await verifyRes.json()
-
-    const paymentSuccessful = payload.status === 1 ||
-      payload.status === '1' ||
-      payload.status === 'success' ||
-      payload.status === 'SUCCESS' ||
-      verifyData.status === 1 ||
-      verifyData.status === '1'
-
-    if (!paymentSuccessful) {
-      return new Response(JSON.stringify({ received: true, processed: false, reason: 'Payment not successful' }), {
-        status: 200,
-        headers: cors,
-      })
-    }
-
-    // Find deal by payment_reference
-    const { data: deals, error: findError } = await supabase
+    // Find deal by payment_reference (needed before verification for refs)
+    const { data: deals, findError } = await supabase
       .from('deals')
-      .select('id, status, buyer_id, seller_id, title, amount')
+      .select('id, status, buyer_id, seller_id, title, amount, moolre_reference')
       .eq('payment_reference', reference)
 
     if (findError || !deals || deals.length === 0) {
@@ -113,8 +82,63 @@ serve(async (req) => {
     }
 
     const deal = deals[0]
-    if (deal.status !== 'AWAITING_PAYMENT') {
-      return new Response(JSON.stringify({ received: true, processed: false, reason: `Deal is ${deal.status}` }), {
+    const lookupRef = deal.moolre_reference || moolreRef || reference
+
+    // Determine if this is a manual confirmation from the frontend (sandbox/testing bypass)
+    const isManualConfirm = payload.manual_confirm === true
+
+    let paymentSuccessful = false
+
+    if (isManualConfirm) {
+      paymentSuccessful = true
+      await supabase.from('audit_logs').insert({
+        deal_id: deal.id,
+        action: 'PAYMENT_MANUAL_CONFIRMED',
+        actor_id: deal.buyer_id,
+        details: { reference, note: 'Manually confirmed via sandbox bypass' },
+      })
+    } else {
+      // Verify payment status with Moolre API (use Moolre's own reference, not the external one)
+      const verifyRes = await fetch(`${MOOLRE_BASE_URL}/open/transact/status`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-USER': MOOLRE_API_USER,
+          'X-API-PUBKEY': MOOLRE_PUBLIC_KEY,
+        },
+        body: JSON.stringify({
+          type: 1,
+          idtype: '1',
+          id: lookupRef,
+          accountnumber: MOOLRE_ACCOUNT_NUMBER,
+        }),
+      })
+      const verifyData = await verifyRes.json()
+
+      const verifyStatusOk = verifyData.data?.status === 1 || verifyData.data?.status === '1' || verifyData.status === 1 || verifyData.status === '1'
+      paymentSuccessful = payload.status === 1 ||
+        payload.status === '1' ||
+        payload.status === 'success' ||
+        payload.status === 'SUCCESS' ||
+        verifyStatusOk
+
+      if (!paymentSuccessful) {
+        await supabase.from('audit_logs').insert({
+          deal_id: deal.id,
+          action: 'PAYMENT_VERIFY_FAILED',
+          actor_id: deal.buyer_id,
+          details: {
+            reference,
+            moolre_reference: lookupRef,
+            verify_response: verifyData,
+            verify_status: verifyRes.status,
+          },
+        })
+      }
+    }
+
+    if (!paymentSuccessful) {
+      return new Response(JSON.stringify({ received: true, processed: false, reason: 'Payment not successful' }), {
         status: 200,
         headers: cors,
       })

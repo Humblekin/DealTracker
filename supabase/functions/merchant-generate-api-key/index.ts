@@ -14,45 +14,70 @@ serve(async (req) => {
   if (req.method !== 'POST') return methodNotAllowed(req)
 
   try {
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: cors })
-    }
-
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: { autoRefreshToken: false, persistSession: false },
     })
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    )
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: cors })
-    }
+    const { merchant_id, access_token } = await req.json()
 
-    const { data: caller } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (caller?.role !== 'admin') {
-      return new Response(JSON.stringify({ error: 'Only admins can generate API keys' }), { status: 403, headers: cors })
-    }
-
-    const { merchant_id } = await req.json()
     if (!merchant_id) {
       return new Response(JSON.stringify({ error: 'merchant_id is required' }), { status: 400, headers: cors })
     }
 
-    // Verify merchant exists and is ACTIVE
-    const { data: merchant, error: merchantError } = await supabase
-      .from('merchants')
-      .select('id, name, email, status')
-      .eq('id', merchant_id)
-      .single()
+    let merchant: { id: string; name: string; email: string; status: string; settings: Record<string, unknown> } | null = null
 
-    if (merchantError || !merchant) {
+    // Two auth modes:
+    // 1. Admin JWT (existing flow)
+    // 2. Merchant access_token (self-service flow)
+    const authHeader = req.headers.get('Authorization')
+    if (authHeader) {
+      const { data: { user }, error: userError } = await supabase.auth.getUser(
+        authHeader.replace('Bearer ', '')
+      )
+      if (!userError && user) {
+        const { data: caller } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single()
+
+        if (caller?.role === 'admin') {
+          // Admin flow — just verify merchant exists
+          const { data: m } = await supabase
+            .from('merchants')
+            .select('id, name, email, status, settings')
+            .eq('id', merchant_id)
+            .single()
+          merchant = m as typeof merchant
+        }
+      }
+    }
+
+    // If not authenticated as admin, check access_token
+    if (!merchant) {
+      if (!access_token) {
+        return new Response(JSON.stringify({ error: 'Unauthorized. Provide admin Authorization header or merchant access_token.' }), { status: 401, headers: cors })
+      }
+
+      const { data: m } = await supabase
+        .from('merchants')
+        .select('id, name, email, status, settings')
+        .eq('id', merchant_id)
+        .single()
+
+      if (!m) {
+        return new Response(JSON.stringify({ error: 'Merchant not found' }), { status: 404, headers: cors })
+      }
+
+      const settings = (typeof m.settings === 'string' ? JSON.parse(m.settings) : m.settings) || {}
+      if (settings.access_token !== access_token) {
+        return new Response(JSON.stringify({ error: 'Invalid access token' }), { status: 401, headers: cors })
+      }
+
+      merchant = m as typeof merchant
+    }
+
+    if (!merchant) {
       return new Response(JSON.stringify({ error: 'Merchant not found' }), { status: 404, headers: cors })
     }
 
@@ -79,11 +104,12 @@ serve(async (req) => {
 
     await supabase.from('audit_logs').insert({
       action: 'MERCHANT_API_KEY_GENERATED',
-      actor_id: user.id,
+      actor_id: null,
       details: {
         merchant_id: merchant.id,
         merchant_name: merchant.name,
         key_prefix: prefix,
+        method: access_token ? 'merchant_self_service' : 'admin',
       },
     })
 

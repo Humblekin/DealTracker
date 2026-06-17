@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import StatusBadge from '../components/StatusBadge';
 import { formatGHS } from '../utils/fees';
 import { DEAL_STATUS } from '../utils/constants';
+import { DollarSign } from 'lucide-react';
 import toast from 'react-hot-toast';
 import './Admin.css';
 
@@ -32,7 +33,7 @@ export default function AdminDashboard() {
   const [merchants, setMerchants] = useState([]);
   const [showRegisterMerchant, setShowRegisterMerchant] = useState(false);
   const [merchantForm, setMerchantForm] = useState({ name: '', email: '', platform_url: '', webhook_url: '' });
-  const [generatedKey, setGeneratedKey] = useState(null);
+  const [registeredMerchant, setRegisteredMerchant] = useState(null);
 
   useEffect(() => { loadAll(); }, []);
 
@@ -214,7 +215,7 @@ export default function AdminDashboard() {
       return;
     }
     setActionLoading('register_merchant');
-    setGeneratedKey(null);
+    setRegisteredMerchant(null);
     try {
       const { data, error } = await supabase.functions.invoke('merchant-register', {
         body: {
@@ -225,7 +226,7 @@ export default function AdminDashboard() {
         },
       })
       if (error) throw error;
-      setGeneratedKey(data);
+      setRegisteredMerchant(data);
       toast.success('Merchant registered successfully!');
       setMerchantForm({ name: '', email: '', platform_url: '', webhook_url: '' });
       loadAll();
@@ -257,25 +258,6 @@ export default function AdminDashboard() {
       toast.success('Merchant rejected.');
       loadAll();
     } catch (err) { console.error(err); toast.error('Failed to reject merchant.'); }
-    finally { setActionLoading(null); }
-  }
-
-  const [showGenerateKey, setShowGenerateKey] = useState(null);
-
-  async function handleGenerateKey(merchantId) {
-    setActionLoading(`key_${merchantId}`);
-    try {
-      const { data, error } = await supabase.functions.invoke('merchant-generate-api-key', {
-        body: { merchant_id: merchantId },
-      })
-      if (error) throw error;
-      setGeneratedKey(data);
-      setShowGenerateKey(data);
-      loadAll();
-    } catch (err) {
-      console.error(err);
-      toast.error(err.message || 'Failed to generate API key.');
-    }
     finally { setActionLoading(null); }
   }
 
@@ -327,7 +309,7 @@ export default function AdminDashboard() {
                 <div className="stat-value">{formatGHS(stats.totalVolume)}</div>
               </div>
               <div className="stat-card">
-                <div className="stat-label">💰 Platform Profit</div>
+                <div className="stat-label"><DollarSign size={16} /> Platform Profit</div>
                 <div className="stat-value" style={{color:'var(--color-success)'}}>{formatGHS(stats.platformProfit)}</div>
               </div>
 
@@ -481,8 +463,8 @@ export default function AdminDashboard() {
           <>
             <div className="section-header-row">
               <h3>Registered Platforms ({merchants.length})</h3>
-              <button className="btn btn-primary" onClick={() => { setShowRegisterMerchant(true); setGeneratedKey(null); }}>
-                + Register Platform
+              <button className="btn btn-primary" onClick={() => { setShowRegisterMerchant(true); setRegisteredMerchant(null); }}>
+                + Register Platform (Admin)
               </button>
             </div>
 
@@ -537,9 +519,7 @@ export default function AdminDashboard() {
                             </>
                           )}
                           {m.status === 'ACTIVE' && (
-                            <button className="btn btn-sm btn-primary" onClick={() => handleGenerateKey(m.id)} disabled={actionLoading === `key_${m.id}`}>
-                              {actionLoading === `key_${m.id}` ? '...' : 'Generate Key'}
-                            </button>
+                            <span className="text-muted" style={{ fontSize: '0.78rem' }}>Self-serve via Developer Portal</span>
                           )}
                           {m.status === 'REJECTED' && (
                             <span className="action-done">Rejected</span>
@@ -558,27 +538,47 @@ export default function AdminDashboard() {
         )}
       </div>
 
-      {(showRegisterMerchant || showGenerateKey) && (
-        <div className="modal-overlay" onClick={() => { setShowRegisterMerchant(false); setShowGenerateKey(null); setGeneratedKey(null); }}>
+      {(showRegisterMerchant || registeredMerchant) && (
+        <div className="modal-overlay" onClick={() => { setShowRegisterMerchant(false); setRegisteredMerchant(null); }}>
           <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 500 }}>
             <div className="modal-header">
-              <h2>{showGenerateKey ? 'API Key Generated' : generatedKey ? 'Platform Registered' : 'Register E-Commerce Platform'}</h2>
-              <button className="modal-close" onClick={() => { setShowRegisterMerchant(false); setShowGenerateKey(null); setGeneratedKey(null); }}>&times;</button>
+              <h2>{registeredMerchant ? 'Platform Registered' : 'Register E-Commerce Platform'}</h2>
+              <button className="modal-close" onClick={() => { setShowRegisterMerchant(false); setRegisteredMerchant(null); }}>&times;</button>
             </div>
-            {generatedKey ? (
+            {registeredMerchant ? (
               <div className="modal-body">
                 <div className="form-group">
                   <label>Platform</label>
-                  <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>{showGenerateKey ? generatedKey.merchant_id : generatedKey.merchant?.name || 'Merchant'}</div>
+                  <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>{registeredMerchant.merchant?.name || 'Merchant'}</div>
                 </div>
+                {registeredMerchant.access_token && (
+                  <div className="form-group">
+                    <label>Merchant Access Token (share with the merchant)</label>
+                    <div className="api-key-display">
+                      <code className="api-key-code" style={{ fontSize: '0.75rem' }}>{registeredMerchant.access_token}</code>
+                      <button
+                        className="btn btn-sm btn-ghost"
+                        onClick={() => {
+                          navigator.clipboard.writeText(registeredMerchant.access_token);
+                          toast.success('Access token copied!');
+                        }}
+                      >
+                        Copy
+                      </button>
+                    </div>
+                    <p className="confirm-sub">
+                      The merchant uses this with their Application ID to generate API keys from the Developer Portal.
+                    </p>
+                  </div>
+                )}
                 <div className="form-group">
                   <label>API Key (shown once)</label>
                   <div className="api-key-display">
-                    <code className="api-key-code">{generatedKey.api_key}</code>
+                    <code className="api-key-code">{registeredMerchant.api_key}</code>
                     <button
                       className="btn btn-sm btn-ghost"
                       onClick={() => {
-                        navigator.clipboard.writeText(generatedKey.api_key);
+                        navigator.clipboard.writeText(registeredMerchant.api_key);
                         toast.success('API key copied!');
                       }}
                     >
@@ -589,7 +589,7 @@ export default function AdminDashboard() {
                     Store this key securely. It will not be shown again.
                   </p>
                 </div>
-                <button className="btn btn-primary btn-full" onClick={() => { setShowRegisterMerchant(false); setShowGenerateKey(null); setGeneratedKey(null); }}>
+                <button className="btn btn-primary btn-full" onClick={() => { setShowRegisterMerchant(false); setRegisteredMerchant(null); }}>
                   Done
                 </button>
               </div>
@@ -635,7 +635,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
             )}
-            {!generatedKey && (
+            {!registeredMerchant && (
               <div className="modal-footer">
                 <button className="btn btn-ghost" onClick={() => setShowRegisterMerchant(false)}>Cancel</button>
                 <button className="btn btn-primary" onClick={handleRegisterMerchant} disabled={actionLoading === 'register_merchant'}>

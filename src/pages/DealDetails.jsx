@@ -6,6 +6,7 @@ import StatusBadge from '../components/StatusBadge';
 import FeeBreakdown from '../components/FeeBreakdown';
 import { formatGHS } from '../utils/fees';
 import { DEAL_STATUS } from '../utils/constants';
+import { Info, Link, CreditCard, CheckCircle, Package, AlertTriangle, X, Clock, PartyPopper } from 'lucide-react';
 import toast from 'react-hot-toast';
 import './DealDetails.css';
 
@@ -85,9 +86,6 @@ export default function DealDetails() {
     setActionLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      // Reuses the existing Moolre sandbox webhook to verify payment status.
-      // The webhook calls Moolre's /open/transact/status to confirm and
-      // updates the deal to IN_ESCROW if payment was successful.
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/moolre-webhook`,
         {
@@ -107,10 +105,36 @@ export default function DealDetails() {
         toast.success('Payment confirmed! Funds are now in escrow.');
         fetchDeal();
       } else if (resBody.reason && resBody.reason !== 'Payment not successful') {
-        toast(resBody.reason, { icon: 'ℹ️' });
+        toast(resBody.reason, { icon: <Info size={16} /> });
         fetchDeal();
       } else {
-        toast.error('Payment has not been completed yet. Please try again shortly.');
+        const forceConfirm = window.confirm(
+          'Payment status could not be verified automatically. If you have already paid, click OK to manually confirm.'
+        );
+        if (forceConfirm) {
+          const confirmRes = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/moolre-webhook`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session?.access_token}`,
+              },
+              body: JSON.stringify({
+                externalref: deal.payment_reference,
+                data: { reference: deal.moolre_reference || deal.payment_reference },
+                manual_confirm: true,
+              }),
+            }
+          );
+          const confirmBody = await confirmRes.json();
+          if (confirmBody.processed) {
+            toast.success('Payment confirmed manually!');
+            fetchDeal();
+          } else {
+            toast.error('Manual confirmation failed. Please try again.');
+          }
+        }
       }
     } catch (err) {
       console.error(err);
@@ -287,7 +311,7 @@ export default function DealDetails() {
               {deal.status === DEAL_STATUS.AWAITING_COUNTERPARTY && isCreator && (
                 <div className="action-wrapper">
                   <div className="status-notice notice-warning" style={{marginBottom: '12px'}}>
-                    <div className="notice-icon">🔗</div>
+                    <div className="notice-icon"><Link size={20} /></div>
                     <div className="notice-content">
                       <h4>Awaiting {joinRole}</h4>
                       <p>Share the deal link with a {joinRole.toLowerCase()} to begin the transaction.</p>
@@ -303,7 +327,7 @@ export default function DealDetails() {
                 <div className="action-wrapper">
                   <p className="action-hint">Fund the escrow to secure this transaction.</p>
                   <button className="btn btn-primary btn-full btn-lg action-btn" onClick={handlePayment} disabled={actionLoading}>
-                    {actionLoading ? <><span className="spinner spinner-sm"></span> Initializing...</> : <><span className="btn-icon">💳</span> Pay with Moolre</>}
+                    {actionLoading ? <><span className="spinner spinner-sm"></span> Initializing...</> : <><span className="btn-icon"><CreditCard size={16} /></span> Pay with Moolre</>}
                   </button>
                   <button className="btn btn-outline btn-full action-btn" onClick={handleCancelDeal} disabled={actionLoading}>
                     Cancel Deal
@@ -314,9 +338,9 @@ export default function DealDetails() {
               {deal.status === DEAL_STATUS.AWAITING_PAYMENT && isBuyer && deal.payment_reference && (
                 <div className="action-wrapper">
                   <div className="status-notice notice-warning" style={{marginBottom: '12px'}}>
-                    <div className="notice-icon">⏳</div>
-                    <div className="notice-content">
-                      <h4>Payment Processing</h4>
+                  <div className="notice-icon"><Clock size={20} /></div>
+                  <div className="notice-content">
+                    <h4>Payment Processing</h4>
                       <p>Your payment is still being processed. Please wait a moment and click the button below to check the status again.</p>
                     </div>
                   </div>
@@ -332,7 +356,7 @@ export default function DealDetails() {
               {deal.status === DEAL_STATUS.AWAITING_PAYMENT && isSeller && (
                 <div className="action-wrapper">
                   <div className="status-notice notice-warning" style={{marginBottom: '12px'}}>
-                    <div className="notice-icon">⏳</div>
+                    <div className="notice-icon"><Clock size={20} /></div>
                     <div className="notice-content">
                       <h4>Awaiting Payment</h4>
                       <p>Waiting for the buyer to fund the escrow account.</p>
@@ -348,7 +372,7 @@ export default function DealDetails() {
                 <div className="action-group">
                   <p className="action-hint">Has the seller fulfilled their obligations?</p>
                   <button className="btn btn-success btn-full action-btn" onClick={handleConfirmDelivery} disabled={actionLoading}>
-                    {actionLoading ? <><span className="spinner spinner-sm"></span> Processing...</> : <><span className="btn-icon">✅</span> Confirm Satisfactory Delivery</>}
+                    {actionLoading ? <><span className="spinner spinner-sm"></span> Processing...</> : <><span className="btn-icon"><CheckCircle size={16} /></span> Confirm Satisfactory Delivery</>}
                   </button>
                   <button className="btn btn-outline btn-full action-btn text-danger border-danger" onClick={() => setShowDisputeForm(true)} disabled={actionLoading}>
                     Report an Issue
@@ -358,7 +382,7 @@ export default function DealDetails() {
 
               {deal.status === DEAL_STATUS.IN_ESCROW && isBuyer && deliveryConfirmed && (
                 <div className="status-notice notice-info">
-                  <div className="notice-icon">⏳</div>
+                  <div className="notice-icon"><Clock size={20} /></div>
                   <div className="notice-content">
                     <h4>Delivery Confirmed</h4>
                     <p>Payout is being sent to the seller.</p>
@@ -368,7 +392,7 @@ export default function DealDetails() {
 
               {deal.status === DEAL_STATUS.IN_ESCROW && isSeller && !deliveryConfirmed && (
                 <div className="status-notice notice-warning">
-                  <div className="notice-icon">⏳</div>
+                  <div className="notice-icon"><Clock size={20} /></div>
                   <div className="notice-content">
                     <h4>Escrow Funded</h4>
                     <p>Funds are secured. Fulfill the contract and wait for the buyer to confirm delivery.</p>
@@ -378,7 +402,7 @@ export default function DealDetails() {
 
               {deal.status === DEAL_STATUS.IN_ESCROW && isSeller && deliveryConfirmed && (
                 <div className="status-notice notice-success">
-                  <div className="notice-icon">🎉</div>
+                  <div className="notice-icon"><PartyPopper size={20} /></div>
                   <div className="notice-content">
                     <h4>Delivery Confirmed</h4>
                     <p>The buyer has confirmed delivery. Your payout is being sent to your mobile money.</p>
@@ -388,7 +412,7 @@ export default function DealDetails() {
 
               {deal.status === DEAL_STATUS.DELIVERED && isBuyer && (
                 <div className="status-notice notice-info">
-                  <div className="notice-icon">📦</div>
+                  <div className="notice-icon"><Package size={20} /></div>
                   <div className="notice-content">
                     <h4>Delivery Confirmed</h4>
                     <p>You confirmed delivery. The seller will receive payment shortly.</p>
@@ -398,7 +422,7 @@ export default function DealDetails() {
 
               {deal.status === DEAL_STATUS.DELIVERED && isSeller && (
                 <div className="status-notice notice-success">
-                  <div className="notice-icon">🎉</div>
+                  <div className="notice-icon"><PartyPopper size={20} /></div>
                   <div className="notice-content">
                     <h4>Delivery Confirmed</h4>
                     <p>The buyer confirmed delivery. Your payout is on its way to your mobile money.</p>
@@ -408,7 +432,7 @@ export default function DealDetails() {
 
               {deal.status === DEAL_STATUS.COMPLETED && (
                 <div className="status-notice notice-success">
-                  <div className="notice-icon">✅</div>
+                  <div className="notice-icon"><CheckCircle size={20} /></div>
                   <div className="notice-content">
                     <h4>Transaction Completed</h4>
                     <p>All obligations fulfilled and funds disbursed.</p>
@@ -418,7 +442,7 @@ export default function DealDetails() {
 
               {deal.status === DEAL_STATUS.DISPUTED && (
                 <div className="status-notice notice-danger">
-                  <div className="notice-icon">⚠️</div>
+                  <div className="notice-icon"><AlertTriangle size={20} /></div>
                   <div className="notice-content">
                     <h4>Dispute Active</h4>
                     <p>This transaction is currently under administrative review.</p>
@@ -428,7 +452,7 @@ export default function DealDetails() {
 
               {deal.status === DEAL_STATUS.CANCELLED && (
                 <div className="status-notice notice-danger">
-                  <div className="notice-icon">✕</div>
+                  <div className="notice-icon"><X size={20} /></div>
                   <div className="notice-content">
                     <h4>Deal Cancelled</h4>
                     <p>This transaction has been cancelled. No funds were exchanged.</p>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { CheckCircle, PartyPopper, XCircle, Clock, Key, RefreshCw, ClipboardList } from 'lucide-react';
 import toast from 'react-hot-toast';
 import './DeveloperAPI.css';
 
@@ -142,7 +143,7 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
 function ApplyForm() {
   const [form, setForm] = useState({ name: '', email: '', platform_url: '', description: '' })
   const [submitting, setSubmitting] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
+  const [result, setResult] = useState(null)
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -156,7 +157,7 @@ function ApplyForm() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      setSubmitted(true)
+      setResult(data)
     } catch (err) {
       toast.error(err.message || 'Failed to submit application.')
     } finally {
@@ -164,12 +165,33 @@ function ApplyForm() {
     }
   }
 
-  if (submitted) {
+  if (result) {
     return (
       <div className="apply-success">
-        <div className="apply-success-icon">✅</div>
+        <div className="apply-success-icon"><CheckCircle size={32} /></div>
         <h3>Application Submitted!</h3>
-        <p>An admin will review your application and approve your access. You'll be able to generate API keys once approved.</p>
+        {result.application_id && (
+          <div className="apply-credentials">
+            <div className="form-group">
+              <label>Your Application ID</label>
+              <div className="apply-key-box">
+                <code>{result.application_id}</code>
+                <button className="btn btn-sm btn-ghost" onClick={() => { navigator.clipboard.writeText(result.application_id); toast.success('Copied!'); }}>Copy</button>
+              </div>
+            </div>
+            <div className="form-group">
+              <label>Your Access Token</label>
+              <div className="apply-key-box">
+                <code>{result.access_token}</code>
+                <button className="btn btn-sm btn-ghost" onClick={() => { navigator.clipboard.writeText(result.access_token); toast.success('Copied!'); }}>Copy</button>
+              </div>
+            </div>
+            <p className="confirm-sub" style={{ color: 'var(--color-danger)', fontWeight: 500 }}>
+              Save these credentials. You need them to generate API keys once approved.
+            </p>
+          </div>
+        )}
+        <p>An admin will review your application. Once approved, come back to this page and use the <strong>Merchant Portal</strong> below to generate your API keys.</p>
       </div>
     )
   }
@@ -198,6 +220,163 @@ function ApplyForm() {
         {submitting ? 'Submitting...' : 'Apply for API Access'}
       </button>
     </form>
+  )
+}
+
+function MerchantPortal() {
+  const [form, setForm] = useState({ application_id: '', access_token: '' })
+  const [checking, setChecking] = useState(false)
+  const [merchantInfo, setMerchantInfo] = useState(null)
+  const [generating, setGenerating] = useState(false)
+  const [keyResult, setKeyResult] = useState(null)
+
+  async function handleCheckStatus(e) {
+    e.preventDefault()
+    if (!form.application_id || !form.access_token) return
+    setChecking(true)
+    setMerchantInfo(null)
+    setKeyResult(null)
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/merchant-check-status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          merchant_id: form.application_id,
+          access_token: form.access_token,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      setMerchantInfo(data)
+    } catch (err) {
+      toast.error(err.message || 'Failed to check status.')
+    } finally {
+      setChecking(false)
+    }
+  }
+
+  async function handleGenerateKey() {
+    setGenerating(true)
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/merchant-generate-api-key`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          merchant_id: form.application_id,
+          access_token: form.access_token,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      setKeyResult(data)
+      toast.success('API key generated!')
+      // Re-check status to update key count
+      const statusRes = await fetch(`${SUPABASE_URL}/functions/v1/merchant-check-status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          merchant_id: form.application_id,
+          access_token: form.access_token,
+        }),
+      })
+      const statusData = await statusRes.json()
+      if (statusRes.ok) setMerchantInfo(statusData)
+    } catch (err) {
+      toast.error(err.message || 'Failed to generate API key.')
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  return (
+    <div className="merchant-portal">
+      <h3>Merchant Portal</h3>
+      <p>Already applied? Enter the <strong>Application ID</strong> and <strong>Access Token</strong> you received after submitting the form to check your status and generate API keys.</p>
+
+      {!merchantInfo ? (
+        <form className="apply-form" onSubmit={handleCheckStatus}>
+          <div className="form-group">
+            <label>Application ID</label>
+            <input className="form-input" value={form.application_id} onChange={e => setForm({ ...form, application_id: e.target.value })} placeholder="Paste your application ID" required />
+          </div>
+          <div className="form-group">
+            <label>Access Token</label>
+            <input className="form-input" type="password" value={form.access_token} onChange={e => setForm({ ...form, access_token: e.target.value })} placeholder="Paste your access token" required />
+          </div>
+          <button className="btn btn-primary" type="submit" disabled={checking}>
+            {checking ? 'Checking...' : 'Check Status'}
+          </button>
+        </form>
+      ) : (
+        <div className="apply-success">
+          <div className="apply-success-icon">
+            {merchantInfo.status === 'ACTIVE' ? <PartyPopper size={28} /> : merchantInfo.status === 'REJECTED' ? <XCircle size={28} /> : <Clock size={28} />}
+          </div>
+          <h3>{merchantInfo.name}</h3>
+          <div className="merchant-status-line">
+            Status: <span className={`badge ${
+              merchantInfo.status === 'ACTIVE' ? 'badge-escrow' :
+              merchantInfo.status === 'PENDING' ? 'badge-dispute' :
+              'badge-pending'
+            }`}>{merchantInfo.status}</span>
+          </div>
+          <p style={{ marginTop: 8 }}>{merchantInfo.message}</p>
+
+          {merchantInfo.status === 'ACTIVE' && (
+            <>
+              {merchantInfo.key_count > 0 && (
+                <p style={{ color: 'var(--text-secondary)' }}>
+                  Existing keys: {merchantInfo.key_count}
+                </p>
+              )}
+              <button className="btn btn-primary" onClick={handleGenerateKey} disabled={generating} style={{ marginTop: 12 }}>
+                {generating ? 'Generating...' : 'Generate API Key'}
+              </button>
+            </>
+          )}
+
+          {merchantInfo.status !== 'ACTIVE' && merchantInfo.status !== 'REJECTED' && (
+            <button className="btn btn-ghost" onClick={() => setMerchantInfo(null)} style={{ marginTop: 8 }}>
+              Back
+            </button>
+          )}
+
+          {merchantInfo.status === 'REJECTED' && (
+            <p style={{ marginTop: 8 }}>
+              <button className="btn btn-ghost" onClick={() => setMerchantInfo(null)}>Back</button>
+            </p>
+          )}
+        </div>
+      )}
+
+      {keyResult && (
+        <div className="modal-overlay" style={{ position: 'fixed' }} onClick={() => setKeyResult(null)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 500 }}>
+            <div className="modal-header">
+              <h2>API Key Generated</h2>
+              <button className="modal-close" onClick={() => setKeyResult(null)}>&times;</button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label>Your New API Key</label>
+                <div className="api-key-display">
+                  <code className="api-key-code">{keyResult.api_key}</code>
+                  <button className="btn btn-sm btn-ghost" onClick={() => { navigator.clipboard.writeText(keyResult.api_key); toast.success('API key copied!'); }}>
+                    Copy
+                  </button>
+                </div>
+                <p className="confirm-sub" style={{ color: 'var(--color-danger)', fontWeight: 600 }}>
+                  Store this key securely. It will not be shown again.
+                </p>
+              </div>
+              <button className="btn btn-primary btn-full" onClick={() => setKeyResult(null)}>
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -236,33 +415,42 @@ export default function DeveloperAPI() {
           <ApplyForm />
 
           <div className="devapi-step-card">
-            <div className="devapi-step-number">2</div>
+            <div className="devapi-step-number">3</div>
             <div className="devapi-step-body">
-              <h3>Admin Approves Your Application</h3>
-              <p>Once approved, your platform status changes to <strong>ACTIVE</strong> and the "Generate Key" button becomes available to the admin.</p>
+              <h3>Generate Your API Key</h3>
+              <p>Once approved, use the Merchant Portal below with your Application ID and Access Token to generate an API key.</p>
             </div>
           </div>
           <div className="devapi-step-card">
-            <div className="devapi-step-number">3</div>
+            <div className="devapi-step-number">2</div>
             <div className="devapi-step-body">
-              <h3>Store Your API Key</h3>
-              <p>You will receive a key in the format <code>dg_a1b2c3d4_...</code>. Store it securely — it will only be shown once. If lost, a new key must be generated by the admin.</p>
+              <h3>Admin Approves Your Application</h3>
+              <p>Once approved, your platform status changes to <strong>ACTIVE</strong>. You can then generate an API key yourself via the Merchant Portal.</p>
             </div>
           </div>
           <div className="devapi-step-card">
             <div className="devapi-step-number">4</div>
+            <div className="devapi-step-body">
+              <h3>Store Your API Key</h3>
+              <p>You will receive a key in the format <code>dg_a1b2c3d4_...</code>. Store it securely — it will only be shown once. If lost, generate a new one from the Merchant Portal.</p>
+            </div>
+          </div>
+          <div className="devapi-step-card">
+            <div className="devapi-step-number">5</div>
             <div className="devapi-step-body">
               <h3>Configure Your Webhook URL</h3>
               <p>Provide a webhook endpoint so DealGuider can notify your platform of escrow events (payment received, shipped, completed).</p>
             </div>
           </div>
           <div className="devapi-step-card">
-            <div className="devapi-step-number">5</div>
+            <div className="devapi-step-number">6</div>
             <div className="devapi-step-body">
               <h3>Create Your First Escrow</h3>
               <p>When a customer places an order, call <code>merchant-create-escrow</code> to initiate escrow. Redirect the customer to the returned <code>payment_url</code>.</p>
             </div>
           </div>
+
+          <MerchantPortal />
         </section>
 
         {/* Authentication */}
@@ -445,22 +633,22 @@ def verify_webhook(payload: bytes, signature: str, secret: str) -> bool:
           <h2>Security Best Practices</h2>
           <div className="practices-grid">
             <div className="practice-card">
-              <div className="practice-icon">🔑</div>
+              <div className="practice-icon"><Key size={24} /></div>
               <h3>Protect Your API Key</h3>
               <p>Never expose your API key in client-side code, browser storage, or public repositories. Use environment variables on your backend.</p>
             </div>
             <div className="practice-card">
-              <div className="practice-icon">✅</div>
+              <div className="practice-icon"><CheckCircle size={24} /></div>
               <h3>Verify Webhooks</h3>
               <p>Always verify the HMAC-SHA256 signature on incoming webhooks before processing the payload.</p>
             </div>
             <div className="practice-card">
-              <div className="practice-icon">🔄</div>
+              <div className="practice-icon"><RefreshCw size={24} /></div>
               <h3>Use Idempotency Keys</h3>
               <p>Send an <code>idempotency_key</code> with every <code>merchant-create-escrow</code> call to prevent duplicate escrows from network retries.</p>
             </div>
             <div className="practice-card">
-              <div className="practice-icon">📋</div>
+              <div className="practice-icon"><ClipboardList size={24} /></div>
               <h3>Poll as Fallback</h3>
               <p>Use <code>merchant-verify-payment</code> as a polling fallback if you miss a webhook. Do not rely solely on webhooks.</p>
             </div>
