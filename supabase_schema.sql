@@ -297,6 +297,7 @@ CREATE TABLE IF NOT EXISTS public.merchants (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   email TEXT NOT NULL UNIQUE,
+  user_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
   platform_url TEXT,
   webhook_url TEXT,
   webhook_secret TEXT NOT NULL DEFAULT encode(gen_random_bytes(32), 'hex'),
@@ -311,11 +312,14 @@ CREATE TABLE IF NOT EXISTS public.merchants (
 CREATE TABLE IF NOT EXISTS public.merchant_api_keys (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   merchant_id UUID NOT NULL REFERENCES public.merchants(id) ON DELETE CASCADE,
-  key_hash TEXT NOT NULL,
+  name TEXT NOT NULL,
+  environment TEXT NOT NULL CHECK (environment IN ('test', 'live')),
+  key_hash TEXT NOT NULL UNIQUE,
   key_prefix TEXT NOT NULL,
-  label TEXT,
+  permissions JSONB DEFAULT '{}'::jsonb,
   is_active BOOLEAN DEFAULT TRUE,
   last_used_at TIMESTAMPTZ,
+  expires_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -374,9 +378,12 @@ ALTER TABLE public.merchant_api_keys ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.merchant_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.merchant_webhook_logs ENABLE ROW LEVEL SECURITY;
 
--- Merchants: only admins can view/manage
+-- Merchants: admins can view/manage; merchant owners can view their own
 CREATE POLICY "Admins can view merchants" ON public.merchants
   FOR SELECT USING (public.get_user_role() = 'admin');
+
+CREATE POLICY "Merchants can view own" ON public.merchants
+  FOR SELECT USING (auth.uid() = user_id);
 
 CREATE POLICY "Admins can insert merchants" ON public.merchants
   FOR INSERT WITH CHECK (public.get_user_role() = 'admin');
@@ -384,12 +391,24 @@ CREATE POLICY "Admins can insert merchants" ON public.merchants
 CREATE POLICY "Admins can update merchants" ON public.merchants
   FOR UPDATE USING (public.get_user_role() = 'admin');
 
+CREATE POLICY "Merchants can update own" ON public.merchants
+  FOR UPDATE USING (auth.uid() = user_id);
+
 CREATE POLICY "Admins can delete merchants" ON public.merchants
   FOR DELETE USING (public.get_user_role() = 'admin');
 
--- API Keys: only admins can view
+-- API Keys: admins can view/manage; merchants can view own
 CREATE POLICY "Admins can view API keys" ON public.merchant_api_keys
   FOR SELECT USING (public.get_user_role() = 'admin');
+
+CREATE POLICY "Merchants can view own API keys" ON public.merchant_api_keys
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM public.merchants
+      WHERE merchants.id = merchant_api_keys.merchant_id
+      AND merchants.user_id = auth.uid()
+    )
+  );
 
 CREATE POLICY "Admins can manage API keys" ON public.merchant_api_keys
   FOR INSERT WITH CHECK (public.get_user_role() = 'admin');

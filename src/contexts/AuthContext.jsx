@@ -103,6 +103,14 @@ export function AuthProvider({ children }) {
     return data;
   }
 
+  async function getAccessToken() {
+    const { data, error } = await supabase.auth.getSession()
+    if (error || !data?.session?.access_token) {
+      throw new Error('No active session')
+    }
+    return data.session.access_token
+  }
+
   async function signOut() {
     // Force clear local state and storage FIRST
     setUser(null);
@@ -128,6 +136,7 @@ export function AuthProvider({ children }) {
     signUp,
     signIn,
     signOut,
+    getAccessToken,
     refreshProfile: () => user && fetchProfile(user.id),
     isAdmin: profile?.role === 'admin',
   };

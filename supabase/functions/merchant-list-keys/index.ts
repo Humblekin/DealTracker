@@ -30,37 +30,32 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: cors })
     }
 
-    let { data: merchant, error: merchantError } = await supabase
+    const { data: merchant } = await supabase
       .from('merchants')
-      .select('id, name, email, status, is_active, platform_url, created_at, updated_at, settings')
+      .select('id')
       .eq('user_id', user.id)
       .maybeSingle()
 
-    if (merchantError) {
-      throw merchantError
-    }
-
-    if (!merchant && user.email) {
-      const { data: byEmail, error: emailError } = await supabase
-        .from('merchants')
-        .select('id, name, email, status, is_active, platform_url, created_at, updated_at, settings')
-        .eq('email', user.email)
-        .maybeSingle()
-
-      if (emailError) throw emailError
-      merchant = byEmail
-    }
-
     if (!merchant) {
-      return new Response(JSON.stringify({
-        applied: false,
-        message: 'No merchant application found.',
-      }), { status: 200, headers: cors })
+      return new Response(JSON.stringify({ error: 'Merchant not found' }), { status: 404, headers: cors })
+    }
+
+    const { data: keys, error: keysError } = await supabase
+      .from('merchant_api_keys')
+      .select('id, name, environment, key_prefix, is_active, last_used_at, expires_at, permissions, created_at')
+      .eq('merchant_id', merchant.id)
+      .order('created_at', { ascending: false })
+
+    if (keysError) {
+      throw keysError
     }
 
     return new Response(JSON.stringify({
-      applied: true,
-      merchant,
+      success: true,
+      keys: keys.map(k => ({
+        ...k,
+        key_preview: `${k.key_prefix}...${k.key_prefix.slice(-4)}`,
+      })),
     }), { status: 200, headers: cors })
 
   } catch (err) {

@@ -1,15 +1,11 @@
 import { useAuth } from '../contexts/AuthContext';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { LayoutDashboard, Settings, Store, ClipboardList, Plus } from 'lucide-react';
 import './Navbar.css';
 
-export default function Navbar({ isAdminLayout = false }) {
+export default function Navbar({ isAdminLayout = false, showSidebar = false, onToggleSidebar, onOpenDrawer }) {
   const { user, profile, signOut } = useAuth();
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [menuOpen, setMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [showNotifs, setShowNotifs] = useState(false);
   const notifRef = useRef(null);
@@ -45,13 +41,37 @@ export default function Navbar({ isAdminLayout = false }) {
     }
   };
 
-  const navLinks = getNavLinks(profile?.role);
-  const isActive = (path) => location.pathname === path;
-
   return (
-    <nav className={`navbar ${isAdminLayout ? 'navbar-admin' : ''}`}>
+    <nav className={`navbar ${isAdminLayout ? 'navbar-admin' : ''} ${showSidebar ? 'navbar-user-sidebar' : ''}`}>
       <div className="navbar-inner container">
-        {!isAdminLayout && (
+        {showSidebar && (
+          <>
+            <button
+              className="sidebar-mobile-toggle show-mobile-inline"
+              onClick={onOpenDrawer}
+              aria-label="Open menu"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            </button>
+            <button
+              className="sidebar-mobile-toggle show-desktop-inline"
+              onClick={onToggleSidebar}
+              aria-label="Toggle sidebar"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            </button>
+          </>
+        )}
+
+        {!isAdminLayout && !showSidebar && (
           <Link to={user ? '/dashboard' : '/'} className="navbar-brand">
             <div className="brand-icon-wrap">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
@@ -69,27 +89,11 @@ export default function Navbar({ isAdminLayout = false }) {
           </Link>
         )}
 
-        {isAdminLayout && <div className="navbar-spacer" />}
+        {(isAdminLayout || showSidebar) && <div className="navbar-spacer" />}
 
         {user && (
           <>
-            {!isAdminLayout && (
-              <div className={`navbar-links ${menuOpen ? 'open' : ''}`}>
-                {navLinks.map((link) => (
-                  <Link
-                    key={link.path}
-                    to={link.path}
-                    className={`nav-link ${isActive(link.path) ? 'active' : ''}`}
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    <span className="nav-link-icon">{link.icon}</span>
-                    <span>{link.label}</span>
-                  </Link>
-                ))}
-              </div>
-            )}
-
-            <div className="navbar-right">
+            <div className="navbar-right" style={{ marginLeft: 'auto' }}>
               <div className="notif-bell-wrapper" ref={notifRef}>
                 <button className="notif-bell" onClick={() => setShowNotifs(!showNotifs)} aria-label="Notifications">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
@@ -124,59 +128,27 @@ export default function Navbar({ isAdminLayout = false }) {
                 </div>
               </div>
 
-              {!isAdminLayout && (
-                <button className="btn-logout" onClick={handleSignOut}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
-                    <polyline points="16 17 21 12 16 7" />
-                    <line x1="21" y1="12" x2="9" y2="12" />
-                  </svg>
-                  <span>Logout</span>
-                </button>
-              )}
-
-              <button
-                className={`hamburger ${menuOpen ? 'open' : ''}`}
-                onClick={() => setMenuOpen(!menuOpen)}
-                aria-label="Toggle menu"
-              >
-                <span></span>
-                <span></span>
-                <span></span>
+              <button className="btn-logout" onClick={handleSignOut}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+                <span>Logout</span>
               </button>
             </div>
           </>
         )}
 
         {!user && (
-          <div className="navbar-right">
-            <Link to="/developer" className="nav-link dev-link">API</Link>
-            <Link to="/login" className="btn btn-ghost">Login</Link>
-            <Link to="/register" className="btn btn-primary btn-sm">Get Started</Link>
+          <div className="navbar-right" style={{ marginLeft: 'auto' }}>
+            <Link to="/developer" className="api-badge show-desktop-inline-flex">
+              <span className="api-badge-bracket">&lt;/&gt;</span> API
+            </Link>
+            <Link to="/login" className="btn-nav-login">Login</Link>
           </div>
         )}
       </div>
     </nav>
   );
-}
-
-function getNavLinks(role) {
-  const common = [
-    { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
-  ];
-
-  if (role === 'admin') {
-    return [
-      ...common,
-      { path: '/admin', label: 'Admin Panel', icon: <Settings size={18} /> },
-      { path: '/admin/merchants', label: 'Merchants', icon: <Store size={18} /> },
-      { path: '/transactions', label: 'Transactions', icon: <ClipboardList size={18} /> },
-    ];
-  }
-
-  return [
-    ...common,
-    { path: '/deals/create', label: 'New Deal', icon: <Plus size={18} /> },
-    { path: '/transactions', label: 'Transactions', icon: <ClipboardList size={18} /> },
-  ];
 }

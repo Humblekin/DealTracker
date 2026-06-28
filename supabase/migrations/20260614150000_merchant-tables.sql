@@ -78,49 +78,93 @@ CREATE INDEX IF NOT EXISTS idx_merchant_transactions_idempotency ON public.merch
 CREATE INDEX IF NOT EXISTS idx_merchant_transactions_status ON public.merchant_transactions(status);
 CREATE INDEX IF NOT EXISTS idx_merchant_webhook_logs_merchant ON public.merchant_webhook_logs(merchant_id);
 
--- RLS
-ALTER TABLE public.merchants ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.merchant_api_keys ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.merchant_transactions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.merchant_webhook_logs ENABLE ROW LEVEL SECURITY;
+-- RLS (safe to re-run)
+DO $$ BEGIN
+  ALTER TABLE public.merchants ENABLE ROW LEVEL SECURITY;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
 
--- Merchants: only admins can view/manage merchants
-CREATE POLICY "Admins can view merchants" ON public.merchants
-  FOR SELECT USING (public.get_user_role() = 'admin');
+DO $$ BEGIN
+  ALTER TABLE public.merchant_api_keys ENABLE ROW LEVEL SECURITY;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
 
-CREATE POLICY "Admins can insert merchants" ON public.merchants
-  FOR INSERT WITH CHECK (public.get_user_role() = 'admin');
+DO $$ BEGIN
+  ALTER TABLE public.merchant_transactions ENABLE ROW LEVEL SECURITY;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
 
-CREATE POLICY "Admins can update merchants" ON public.merchants
-  FOR UPDATE USING (public.get_user_role() = 'admin');
+DO $$ BEGIN
+  ALTER TABLE public.merchant_webhook_logs ENABLE ROW LEVEL SECURITY;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
 
-CREATE POLICY "Admins can delete merchants" ON public.merchants
-  FOR DELETE USING (public.get_user_role() = 'admin');
+-- Policies (idempotent – skipped if already exist)
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'merchants' AND policyname = 'Admins can view merchants') THEN
+    CREATE POLICY "Admins can view merchants" ON public.merchants FOR SELECT USING (public.get_user_role() = 'admin');
+  END IF;
+END $$;
 
--- API Keys: only admins can view
-CREATE POLICY "Admins can view API keys" ON public.merchant_api_keys
-  FOR SELECT USING (public.get_user_role() = 'admin');
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'merchants' AND policyname = 'Admins can insert merchants') THEN
+    CREATE POLICY "Admins can insert merchants" ON public.merchants FOR INSERT WITH CHECK (public.get_user_role() = 'admin');
+  END IF;
+END $$;
 
-CREATE POLICY "Admins can manage API keys" ON public.merchant_api_keys
-  FOR INSERT WITH CHECK (public.get_user_role() = 'admin');
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'merchants' AND policyname = 'Admins can update merchants') THEN
+    CREATE POLICY "Admins can update merchants" ON public.merchants FOR UPDATE USING (public.get_user_role() = 'admin');
+  END IF;
+END $$;
 
-CREATE POLICY "Admins can update API keys" ON public.merchant_api_keys
-  FOR UPDATE USING (public.get_user_role() = 'admin');
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'merchants' AND policyname = 'Admins can delete merchants') THEN
+    CREATE POLICY "Admins can delete merchants" ON public.merchants FOR DELETE USING (public.get_user_role() = 'admin');
+  END IF;
+END $$;
 
-CREATE POLICY "Admins can delete API keys" ON public.merchant_api_keys
-  FOR DELETE USING (public.get_user_role() = 'admin');
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'merchant_api_keys' AND policyname = 'Admins can view API keys') THEN
+    CREATE POLICY "Admins can view API keys" ON public.merchant_api_keys FOR SELECT USING (public.get_user_role() = 'admin');
+  END IF;
+END $$;
 
--- Transactions: admins can view all; edge functions using service role bypass RLS
-CREATE POLICY "Admins can view merchant transactions" ON public.merchant_transactions
-  FOR SELECT USING (public.get_user_role() = 'admin');
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'merchant_api_keys' AND policyname = 'Admins can manage API keys') THEN
+    CREATE POLICY "Admins can manage API keys" ON public.merchant_api_keys FOR INSERT WITH CHECK (public.get_user_role() = 'admin');
+  END IF;
+END $$;
 
--- Webhook logs: admins can view
-CREATE POLICY "Admins can view webhook logs" ON public.merchant_webhook_logs
-  FOR SELECT USING (public.get_user_role() = 'admin');
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'merchant_api_keys' AND policyname = 'Admins can update API keys') THEN
+    CREATE POLICY "Admins can update API keys" ON public.merchant_api_keys FOR UPDATE USING (public.get_user_role() = 'admin');
+  END IF;
+END $$;
 
--- Auto-update updated_at
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'merchant_api_keys' AND policyname = 'Admins can delete API keys') THEN
+    CREATE POLICY "Admins can delete API keys" ON public.merchant_api_keys FOR DELETE USING (public.get_user_role() = 'admin');
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'merchant_transactions' AND policyname = 'Admins can view merchant transactions') THEN
+    CREATE POLICY "Admins can view merchant transactions" ON public.merchant_transactions FOR SELECT USING (public.get_user_role() = 'admin');
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'merchant_webhook_logs' AND policyname = 'Admins can view webhook logs') THEN
+    CREATE POLICY "Admins can view webhook logs" ON public.merchant_webhook_logs FOR SELECT USING (public.get_user_role() = 'admin');
+  END IF;
+END $$;
+
+-- Triggers (idempotent)
+DROP TRIGGER IF EXISTS update_merchants_updated_at ON public.merchants;
 CREATE TRIGGER update_merchants_updated_at BEFORE UPDATE ON public.merchants
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
 
+DROP TRIGGER IF EXISTS update_merchant_transactions_updated_at ON public.merchant_transactions;
 CREATE TRIGGER update_merchant_transactions_updated_at BEFORE UPDATE ON public.merchant_transactions
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();

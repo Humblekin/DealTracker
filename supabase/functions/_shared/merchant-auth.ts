@@ -3,7 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.106.2'
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
-interface AuthResult {
+export interface AuthResult {
   merchantId: string
   merchant: {
     id: string
@@ -15,6 +15,8 @@ interface AuthResult {
     settings: Record<string, unknown>
   }
   keyId: string
+  environment: 'test' | 'live'
+  permissions: Record<string, unknown>
 }
 
 export async function authenticateMerchant(apiKey: string): Promise<AuthResult> {
@@ -22,21 +24,25 @@ export async function authenticateMerchant(apiKey: string): Promise<AuthResult> 
     throw new AuthError('API key is required')
   }
 
-  // API keys are formatted as: dg_prefix_secret
   const parts = apiKey.split('_')
-  if (parts.length < 3 || parts[0] !== 'dg' || !parts[1]) {
+  if (parts.length < 4 || parts[0] !== 'dg') {
     throw new AuthError('Invalid API key format')
   }
 
-  const prefix = parts[1]
+  const environment = parts[1]
+  if (environment !== 'test' && environment !== 'live') {
+    throw new AuthError('Invalid API key environment')
+  }
+
+  const prefix = parts[2]
+
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
   })
 
-  // Find the key by prefix
   const { data: keys, error: keyError } = await supabase
     .from('merchant_api_keys')
-    .select('id, key_hash, merchant_id, is_active')
+    .select('id, key_hash, merchant_id, is_active, environment, permissions')
     .eq('key_prefix', prefix)
     .eq('is_active', true)
 
@@ -44,7 +50,6 @@ export async function authenticateMerchant(apiKey: string): Promise<AuthResult> 
     throw new AuthError('Invalid API key')
   }
 
-  // Hash the provided key and compare
   const fullKeyBytes = new TextEncoder().encode(apiKey)
   const hashBuffer = await crypto.subtle.digest('SHA-256', fullKeyBytes)
   const hashArray = Array.from(new Uint8Array(hashBuffer))
@@ -62,7 +67,10 @@ export async function authenticateMerchant(apiKey: string): Promise<AuthResult> 
     throw new AuthError('Invalid API key')
   }
 
-  // Fetch merchant details
+  if (matchedKey.expires_at && new Date(matchedKey.expires_at) < new Date()) {
+    throw new AuthError('API key has expired')
+  }
+
   const { data: merchant, error: merchantError } = await supabase
     .from('merchants')
     .select('*')
@@ -77,11 +85,14 @@ export async function authenticateMerchant(apiKey: string): Promise<AuthResult> 
     throw new AuthError('Merchant account is inactive')
   }
 
-  // Update last_used_at
   await supabase
     .from('merchant_api_keys')
     .update({ last_used_at: new Date().toISOString() })
     .eq('id', matchedKey.id)
+
+  const permissions = typeof matchedKey.permissions === 'string'
+    ? JSON.parse(matchedKey.permissions)
+    : (matchedKey.permissions || {})
 
   return {
     merchantId: merchant.id,
@@ -95,6 +106,8 @@ export async function authenticateMerchant(apiKey: string): Promise<AuthResult> 
       settings: merchant.settings || {},
     },
     keyId: matchedKey.id,
+    environment: matchedKey.environment,
+    permissions,
   }
 }
 

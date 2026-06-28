@@ -1,0 +1,59 @@
+/* ===== Mobile Bottom Navigation ===== */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: calc(var(--bottom-nav-height) + var(--safe-bottom));
+  padding-bottom: var(--safe-bottom);
+  background: rgba(12, 18, 32, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  z-index: 150;
+  padding-top: 6px;
+}
+
+.bottom-nav-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px 12px;
+  min-width: 56px;
+  min-height: 48px;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.65rem;
+  font-weight: 500;
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.bottom-nav-link svg {
+  transition: all var(--transition-fast);
+}
+
+.bottom-nav-link:hover {
+  color: var(--text-secondary);
+}
+
+.bottom-nav-link.active {
+  color: var(--accent-primary);
+}
+
+.bottom-nav-link.active svg {
+  stroke: var(--accent-primary);
+  filter: drop-shadow(0 0 6px rgba(0, 212, 170, 0.3));
+}
+
+@media (min-width: 769px) {
+  .bottom-nav {
+    display: none;
+  }
+}

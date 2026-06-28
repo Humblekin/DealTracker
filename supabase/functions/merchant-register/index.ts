@@ -41,7 +41,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Only admins can register merchants' }), { status: 403, headers: cors })
     }
 
-    const { name, email, platform_url, webhook_url } = await req.json()
+    const { name, email, user_id, platform_url, webhook_url } = await req.json()
     if (!name || !email) {
       return new Response(JSON.stringify({ error: 'name and email are required' }), { status: 400, headers: cors })
     }
@@ -52,11 +52,12 @@ serve(async (req) => {
       .insert({
         name,
         email,
+        user_id: user_id || null,
         platform_url: platform_url || null,
         webhook_url: webhook_url || null,
         status: 'ACTIVE',
         is_active: true,
-        settings: { access_token: crypto.randomUUID().replace(/-/g, '') },
+        settings: {},
       })
       .select()
       .single()
@@ -68,10 +69,14 @@ serve(async (req) => {
       throw merchantError
     }
 
-    // Generate API key: dg_{prefix}_{secret}
-    const prefix = crypto.randomUUID().slice(0, 8)
-    const secret = crypto.randomUUID().replace(/-/g, '')
-    const apiKey = `dg_${prefix}_${secret}`
+    // Generate API key: dg_{environment}_{prefix}_{secret}
+    const prefixBytes = crypto.getRandomValues(new Uint8Array(4))
+    const prefix = Array.from(prefixBytes).map(b => b.toString(36).toLowerCase()).join('')
+
+    const secretBytes = crypto.getRandomValues(new Uint8Array(24))
+    const secret = Array.from(secretBytes).map(b => b.toString(36).toLowerCase()).join('')
+
+    const apiKey = `dg_live_${prefix}_${secret}`
 
     const fullKeyBytes = new TextEncoder().encode(apiKey)
     const hashBuffer = await crypto.subtle.digest('SHA-256', fullKeyBytes)
@@ -80,9 +85,11 @@ serve(async (req) => {
 
     await supabase.from('merchant_api_keys').insert({
       merchant_id: merchant.id,
+      name: 'Primary',
+      environment: 'live',
       key_hash: hashHex,
       key_prefix: prefix,
-      label: 'Primary',
+      permissions: {},
     })
 
     // Audit log
@@ -96,8 +103,6 @@ serve(async (req) => {
       },
     })
 
-    const settings = JSON.parse(merchant.settings as string || '{}') as Record<string, unknown>
-
     return new Response(JSON.stringify({
       success: true,
       merchant: {
@@ -109,7 +114,6 @@ serve(async (req) => {
         webhook_secret: merchant.webhook_secret,
       },
       api_key: apiKey,
-      access_token: settings.access_token as string,
       message: 'Store this API key securely. It will not be shown again.',
     }), { status: 201, headers: cors })
 

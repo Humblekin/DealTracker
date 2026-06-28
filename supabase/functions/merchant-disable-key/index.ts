@@ -11,7 +11,7 @@ serve(async (req) => {
   const corsRes = handleCors(req)
   if (corsRes) return corsRes
 
-  if (req.method !== 'GET') return methodNotAllowed(req)
+  if (req.method !== 'POST') return methodNotAllowed(req)
 
   try {
     const authHeader = req.headers.get('Authorization')
@@ -30,37 +30,52 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: cors })
     }
 
-    let { data: merchant, error: merchantError } = await supabase
+    const { key_id } = await req.json()
+
+    if (!key_id) {
+      return new Response(JSON.stringify({ error: 'key_id is required' }), { status: 400, headers: cors })
+    }
+
+    const { data: merchant } = await supabase
       .from('merchants')
-      .select('id, name, email, status, is_active, platform_url, created_at, updated_at, settings')
+      .select('id')
       .eq('user_id', user.id)
       .maybeSingle()
 
-    if (merchantError) {
-      throw merchantError
-    }
-
-    if (!merchant && user.email) {
-      const { data: byEmail, error: emailError } = await supabase
-        .from('merchants')
-        .select('id, name, email, status, is_active, platform_url, created_at, updated_at, settings')
-        .eq('email', user.email)
-        .maybeSingle()
-
-      if (emailError) throw emailError
-      merchant = byEmail
-    }
-
     if (!merchant) {
-      return new Response(JSON.stringify({
-        applied: false,
-        message: 'No merchant application found.',
-      }), { status: 200, headers: cors })
+      return new Response(JSON.stringify({ error: 'Merchant not found' }), { status: 404, headers: cors })
+    }
+
+    const { data: keyRecord } = await supabase
+      .from('merchant_api_keys')
+      .select('id, merchant_id, is_active')
+      .eq('id', key_id)
+      .single()
+
+    if (!keyRecord) {
+      return new Response(JSON.stringify({ error: 'API key not found' }), { status: 404, headers: cors })
+    }
+
+    if (keyRecord.merchant_id !== merchant.id) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 403, headers: cors })
+    }
+
+    if (!keyRecord.is_active) {
+      return new Response(JSON.stringify({ error: 'API key is already disabled' }), { status: 400, headers: cors })
+    }
+
+    const { error: updateError } = await supabase
+      .from('merchant_api_keys')
+      .update({ is_active: false })
+      .eq('id', key_id)
+
+    if (updateError) {
+      throw updateError
     }
 
     return new Response(JSON.stringify({
-      applied: true,
-      merchant,
+      success: true,
+      message: 'API key disabled successfully.',
     }), { status: 200, headers: cors })
 
   } catch (err) {

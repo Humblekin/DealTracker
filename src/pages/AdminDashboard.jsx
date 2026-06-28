@@ -34,6 +34,9 @@ export default function AdminDashboard() {
   const [showRegisterMerchant, setShowRegisterMerchant] = useState(false);
   const [merchantForm, setMerchantForm] = useState({ name: '', email: '', platform_url: '', webhook_url: '' });
   const [registeredMerchant, setRegisteredMerchant] = useState(null);
+  const [viewingMerchant, setViewingMerchant] = useState(null);
+  const [rejectTarget, setRejectTarget] = useState(null);
+  const [rejectReason, setRejectReason] = useState('');
 
   useEffect(() => { loadAll(); }, []);
 
@@ -50,7 +53,8 @@ export default function AdminDashboard() {
       if (dealsRes.error) throw dealsRes.error;
       if (disputesRes.error) throw disputesRes.error;
       if (usersRes.error) throw usersRes.error;
-      if (merchantsRes.error) throw merchantsRes.error;
+      if (merchantsRes.error) { console.error('Merchants query error:', merchantsRes.error); throw merchantsRes.error; }
+      console.log('Merchants query result:', JSON.parse(JSON.stringify(merchantsRes.data)));
       const d = dealsRes.data || [];
       setDeals(d);
       setDisputes(disputesRes.data || []);
@@ -250,12 +254,26 @@ export default function AdminDashboard() {
   }
 
   async function handleRejectMerchant(merchantId) {
-    if (!window.confirm('Reject this merchant application? They will not be able to use the API.')) return;
-    setActionLoading(`reject_${merchantId}`);
+    setRejectTarget(merchantId);
+    setRejectReason('');
+  }
+
+  async function confirmReject() {
+    if (!rejectTarget) return;
+    setActionLoading(`reject_${rejectTarget}`);
     try {
-      const { error } = await supabase.from('merchants').update({ status: 'REJECTED', is_active: false }).eq('id', merchantId)
+      const { error } = await supabase
+        .from('merchants')
+        .update({
+          status: 'REJECTED',
+          is_active: false,
+          settings: { rejection_reason: rejectReason || null },
+        })
+        .eq('id', rejectTarget)
       if (error) throw error;
       toast.success('Merchant rejected.');
+      setRejectTarget(null);
+      setRejectReason('');
       loadAll();
     } catch (err) { console.error(err); toast.error('Failed to reject merchant.'); }
     finally { setActionLoading(null); }
@@ -484,7 +502,11 @@ export default function AdminDashboard() {
                 <tbody>
                   {merchants.map(m => (
                     <tr key={m.id}>
-                      <td style={{ fontWeight: 600 }}>{m.name}</td>
+                      <td>
+                        <button className="btn btn-ghost btn-sm" onClick={() => setViewingMerchant(m)} style={{ fontWeight: 600, padding: '2px 6px', fontSize: '0.85rem' }}>
+                          {m.name}
+                        </button>
+                      </td>
                       <td className="text-muted">{m.email}</td>
                       <td>
                         <span className={`badge ${
@@ -508,6 +530,9 @@ export default function AdminDashboard() {
                       </td>
                       <td>
                         <div className="admin-actions">
+                          <button className="btn btn-ghost btn-sm" onClick={() => setViewingMerchant(m)} style={{ fontSize: '0.75rem' }}>
+                            View
+                          </button>
                           {m.status === 'PENDING' && (
                             <>
                               <button className="btn btn-sm btn-success" onClick={() => handleApproveMerchant(m.id)} disabled={actionLoading === `approve_${m.id}`}>
@@ -519,7 +544,7 @@ export default function AdminDashboard() {
                             </>
                           )}
                           {m.status === 'ACTIVE' && (
-                            <span className="text-muted" style={{ fontSize: '0.78rem' }}>Self-serve via Developer Portal</span>
+                            <span className="text-muted" style={{ fontSize: '0.78rem' }}>Self-serve</span>
                           )}
                           {m.status === 'REJECTED' && (
                             <span className="action-done">Rejected</span>
@@ -729,6 +754,103 @@ export default function AdminDashboard() {
               <button className="btn btn-ghost" onClick={() => { setEditingDeal(null); setEditingUser(null); }}>Cancel</button>
               <button className="btn btn-primary" onClick={editingDeal ? handleSaveDeal : handleSaveUser} disabled={actionLoading}>
                 {actionLoading ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {viewingMerchant && (
+        <div className="modal-overlay" onClick={() => setViewingMerchant(null)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 500 }}>
+            <div className="modal-header">
+              <h2>{viewingMerchant.name}</h2>
+              <button className="modal-close" onClick={() => setViewingMerchant(null)}>&times;</button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label>Email</label>
+                <div style={{ color: 'var(--text-primary)' }}>{viewingMerchant.email}</div>
+              </div>
+              <div className="form-group">
+                <label>Status</label>
+                <span className={`badge ${
+                  viewingMerchant.status === 'ACTIVE' ? 'badge-escrow' :
+                  viewingMerchant.status === 'PENDING' ? 'badge-dispute' :
+                  'badge-pending'
+                }`}>{viewingMerchant.status}</span>
+              </div>
+              {viewingMerchant.platform_url && (
+                <div className="form-group">
+                  <label>Platform URL</label>
+                  <div style={{ color: 'var(--accent-primary)', wordBreak: 'break-all' }}>
+                    <a href={viewingMerchant.platform_url} target="_blank" rel="noopener noreferrer">{viewingMerchant.platform_url}</a>
+                  </div>
+                </div>
+              )}
+              {viewingMerchant.settings?.description && (
+                <div className="form-group">
+                  <label>Description</label>
+                  <div style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>{viewingMerchant.settings.description}</div>
+                </div>
+              )}
+              {viewingMerchant.settings?.rejection_reason && viewingMerchant.status === 'REJECTED' && (
+                <div className="form-group">
+                  <label>Rejection Reason</label>
+                  <div style={{ color: 'var(--color-danger)' }}>{viewingMerchant.settings.rejection_reason}</div>
+                </div>
+              )}
+              <div className="form-group">
+                <label>Created</label>
+                <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                  {new Date(viewingMerchant.created_at).toLocaleString()}
+                </div>
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label>API Keys</label>
+                <div style={{ color: 'var(--text-muted)' }}>{viewingMerchant.api_keys?.length || 0} key(s)</div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              {viewingMerchant.status === 'PENDING' && (
+                <>
+                  <button className="btn btn-success" onClick={() => { handleApproveMerchant(viewingMerchant.id); setViewingMerchant(null); }}>
+                    Approve
+                  </button>
+                  <button className="btn btn-danger" onClick={() => { setRejectTarget(viewingMerchant.id); setViewingMerchant(null); }}>
+                    Reject
+                  </button>
+                </>
+              )}
+              <button className="btn btn-ghost" onClick={() => setViewingMerchant(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {rejectTarget && (
+        <div className="modal-overlay" onClick={() => { setRejectTarget(null); setRejectReason(''); }}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <h2>Reject Application</h2>
+              <button className="modal-close" onClick={() => { setRejectTarget(null); setRejectReason(''); }}>&times;</button>
+            </div>
+            <div className="modal-body">
+              <p className="confirm-text">Reject this merchant application? They will not be able to use the API.</p>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label>Reason (optional — shown to the applicant)</label>
+                <textarea
+                  className="form-input"
+                  rows={3}
+                  value={rejectReason}
+                  onChange={e => setRejectReason(e.target.value)}
+                  placeholder="Explain why the application was rejected..."
+                />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={() => { setRejectTarget(null); setRejectReason(''); }}>Cancel</button>
+              <button className="btn btn-danger" onClick={confirmReject} disabled={actionLoading === `reject_${rejectTarget}`}>
+                {actionLoading === `reject_${rejectTarget}` ? 'Rejecting...' : 'Reject'}
               </button>
             </div>
           </div>

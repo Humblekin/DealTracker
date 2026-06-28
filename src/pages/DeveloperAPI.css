@@ -64,7 +64,14 @@
 /* Content */
 .devapi-content {
   padding: 60px 0 80px;
-  max-width: 860px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+  .devapi-content {
+    padding: 40px 0 calc(60px + var(--safe-bottom));
+  }
 }
 
 .devapi-section {
@@ -203,8 +210,15 @@
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
-  padding: 24px;
-  margin-bottom: 24px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+@media (min-width: 769px) {
+  .endpoint-card {
+    padding: 24px;
+    margin-bottom: 24px;
+  }
 }
 
 .endpoint-header {
@@ -281,11 +295,19 @@
 .webhook-row {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 14px 20px;
+  gap: 12px;
+  padding: 14px 16px;
   border-bottom: 1px solid var(--border-color);
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   color: var(--text-secondary);
+}
+
+@media (min-width: 769px) {
+  .webhook-row {
+    gap: 16px;
+    padding: 14px 20px;
+    font-size: 0.9rem;
+  }
 }
 
 .webhook-row:last-child {
@@ -293,19 +315,40 @@
 }
 
 .webhook-event {
-  min-width: 180px;
+  min-width: 140px;
   font-weight: 600;
   font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   color: var(--text-primary);
+  flex-shrink: 0;
+}
+
+@media (min-width: 769px) {
+  .webhook-event {
+    min-width: 180px;
+    font-size: 0.82rem;
+  }
 }
 
 /* Practices Grid */
 .practices-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px;
+  grid-template-columns: 1fr;
+  gap: 12px;
   margin-top: 8px;
+}
+
+@media (min-width: 640px) {
+  .practices-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .practices-grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
 }
 
 .practice-card {
@@ -478,27 +521,37 @@
   }
 }
 
-/* Responsive */
-@media (max-width: 768px) {
+/* Mobile-first form enhancements */
+@media (max-width: 480px) {
+  .apply-form,
+  .merchant-portal,
+  .apply-success {
+    padding: 20px 16px;
+  }
+
+  .devapi-hero h1 {
+    font-size: 1.5rem;
+  }
+
   .devapi-hero {
     padding: 60px 0 40px;
   }
 
-  .devapi-hero h1 {
-    font-size: 1.8rem;
-  }
-
-  .webhook-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-  }
-
-  .webhook-event {
-    min-width: unset;
-  }
-
-  .practices-grid {
-    grid-template-columns: 1fr;
+  .devapi-section h2 {
+    font-size: 1.25rem;
   }
 }
+
+/* Key card mobile */
+.api-key-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.api-key-detail {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+/* Responsive - handled mobile-first above */
