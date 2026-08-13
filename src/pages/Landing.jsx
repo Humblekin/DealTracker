@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import { Shield, Zap, Scale, BarChart3, ScrollText, Lock, Key, Package, Smartphone } from 'lucide-react';
 import './Landing.css';
 
@@ -52,7 +52,7 @@ export default function Landing() {
           <div className="hero-trust">
             <p>Powered by institutional infrastructure</p>
             <div className="trust-logos">
-              <span className="trust-logo">MOOLRE</span>
+              <span className="trust-logo">PAYSTACK</span>
             </div>
           </div>
         </div>
@@ -99,7 +99,7 @@ export default function Landing() {
               </div>
               <div className="step-number">03</div>
               <h3>Buyer Funds Escrow</h3>
-              <p>Only the buyer pays. Funds are held securely by Moolre — neither party can access or withdraw them alone. The seller is notified instantly that capital is secured.</p>
+              <p>Only the buyer pays. Funds are held securely by Paystack — neither party can access or withdraw them alone. The seller is notified instantly that capital is secured.</p>
             </div>
 
             <div className="step-connector">
@@ -190,7 +190,7 @@ export default function Landing() {
                 <div className="eaas-feature-icon"><Smartphone size={20} /></div>
                 <div>
                   <strong>Mobile Money Payouts</strong>
-                  <p>Funds are sent directly to the merchant's MoMo wallet via Moolre.</p>
+                  <p>Funds are sent directly to the merchant's MoMo wallet via Paystack.</p>
                 </div>
               </div>
             </div>

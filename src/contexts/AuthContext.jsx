@@ -1,8 +1,9 @@
-import { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { useState, useEffect } from 'react';
+import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from '../lib/supabase';
 import toast from 'react-hot-toast';
+import { AuthContext } from '../hooks/useAuth';
 
-const AuthContext = createContext(null);
+const MAX_CLOCK_SKEW_MS = 120 * 1000; // 2 minutes
 
 const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes
 
@@ -17,7 +18,7 @@ export function AuthProvider({ children }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (mounted) {
         setUser(session?.user ?? null);
-        if (session?.user) fetchProfile(session.user.id);
+        if (session?.user) fetchProfile(session.user);
         else setLoading(false);
       }
     });
@@ -25,7 +26,7 @@ export function AuthProvider({ children }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (mounted) {
         setUser(session?.user ?? null);
-        if (session?.user) fetchProfile(session.user.id);
+        if (session?.user) fetchProfile(session.user);
         else {
           setProfile(null);
           setLoading(false);
@@ -37,6 +38,29 @@ export function AuthProvider({ children }) {
       mounted = false;
       subscription.unsubscribe();
     };
+  }, []);
+
+  // A device clock that is more than ~90s off from Supabase's servers makes every
+  // access token look expired, causing endless token refreshes, rate-limit (429)
+  // failures, and instant logouts. Surface it so it isn't a silent failure.
+  useEffect(() => {
+    const checkClockSkew = async () => {
+      try {
+        const res = await fetch(`${SUPABASE_URL}/auth/v1/health`, {
+          headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+        });
+        const serverTime = Date.parse(res.headers.get('date') || '');
+        if (!serverTime) return;
+        const skewMs = Math.abs(Date.now() - serverTime);
+        if (skewMs > MAX_CLOCK_SKEW_MS) {
+          const minutes = Math.round(skewMs / 60000);
+          toast.warning(
+            `Your device clock is ${minutes} minutes off. This causes sign-in and session failures. Please sync your system clock, then reload.`
+          );
+        }
+      } catch { /* ignore */ }
+    };
+    checkClockSkew();
   }, []);
 
   useEffect(() => {
@@ -64,11 +88,40 @@ export function AuthProvider({ children }) {
     };
   }, [user]);
 
-  async function fetchProfile(userId) {
+  async function fetchProfile(authUser) {
+    const userId = authUser?.id;
+    if (!userId) return;
+
     try {
-      const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
-      if (error) throw error;
-      setProfile(data);
+      const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).limit(1).maybeSingle();
+
+      // .single() errors with PGRST116 for BOTH missing AND duplicate rows, which
+      // made profiles appear broken. .limit(1).maybeSingle() is safe for both.
+
+      if (error && error.code !== 'PGRST116') throw error;
+
+      // Profile row missing (e.g. account predates the auto-create trigger) — try to create it.
+      if (!data) {
+        const { error: insertError } = await supabase.from('profiles').upsert(
+          {
+            id: userId,
+            full_name: authUser?.user_metadata?.full_name || authUser?.email?.split('@')[0] || 'User',
+            email: authUser?.email || null,
+            role: 'buyer',
+          },
+          { onConflict: 'id', ignoreDuplicates: true }
+        );
+        if (insertError) throw insertError;
+
+        const { data: fresh, error: refetchError } = await supabase.from('profiles').select('*').eq('id', userId).limit(1).maybeSingle();
+        if (refetchError) throw refetchError;
+        if (fresh) {
+          setProfile(fresh);
+          return;
+        }
+      }
+
+      if (data) setProfile(data);
     } catch (err) {
       console.error('Error fetching profile:', err);
       toast.error('Failed to load profile. Please refresh the page.');
@@ -112,20 +165,19 @@ export function AuthProvider({ children }) {
   }
 
   async function signOut() {
-    // Force clear local state and storage FIRST
     setUser(null);
     setProfile(null);
-    Object.keys(localStorage).forEach(key => {
-      if (key.startsWith('sb-') && key.endsWith('auth-token')) {
-        localStorage.removeItem(key);
-      }
-    });
-
-    // Then attempt to notify the server
     try {
+      // Let the client clear its own storage and notify other tabs via
+      // BroadcastChannel. Wiping localStorage first can desync that flow.
       await supabase.auth.signOut();
     } catch (error) {
       console.error('Error signing out:', error);
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('sb-') && key.endsWith('auth-token')) {
+          localStorage.removeItem(key);
+        }
+      });
     }
   }
 
@@ -137,7 +189,7 @@ export function AuthProvider({ children }) {
     signIn,
     signOut,
     getAccessToken,
-    refreshProfile: () => user && fetchProfile(user.id),
+    refreshProfile: () => user && fetchProfile(user),
     isAdmin: profile?.role === 'admin',
   };
 
@@ -146,12 +198,4 @@ export function AuthProvider({ children }) {
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
-  }
-  return context;
 }

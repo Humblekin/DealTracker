@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import StatusBadge from '../components/StatusBadge';
 import FeeBreakdown from '../components/FeeBreakdown';
 import { formatGHS } from '../utils/fees';
-import { DEAL_STATUS } from '../utils/constants';
+import { DEAL_STATUS, PAYMENT_STATUS } from '../utils/constants';
+import { usePaystackPayment } from '../hooks/usePaystackPayment';
 import { Info, Link, CreditCard, CheckCircle, Package, AlertTriangle, X, Clock, PartyPopper } from 'lucide-react';
 import toast from 'react-hot-toast';
 import './DealDetails.css';
@@ -20,13 +21,12 @@ export default function DealDetails() {
   const [disputeReason, setDisputeReason] = useState('');
   const [showDisputeForm, setShowDisputeForm] = useState(false);
   const [deliveryConfirmed, setDeliveryConfirmed] = useState(false);
+  const { paying, checking, startPayment, checkPayment } = usePaystackPayment();
 
-  useEffect(() => { fetchDeal(); }, [id]);
-
-  async function fetchDeal() {
+  const fetchDeal = useCallback(async () => {
     try {
       const { data, error } = await supabase.from('deals')
-        .select('*, buyer_profile:profiles!buyer_id(full_name), seller_profile:profiles!seller_id(full_name), payments(*), disputes(*)')
+        .select('*, buyer_profile:profiles!buyer_id(full_name, email), seller_profile:profiles!seller_id(full_name, email), payments(*), disputes(*)')
         .eq('id', id).single();
       if (error) throw error;
       setDeal(data);
@@ -37,9 +37,13 @@ export default function DealDetails() {
         .in('action', ['DELIVERY_CONFIRMED', 'FUNDS_TRANSFERRED'])
         .limit(1);
       setDeliveryConfirmed(logs && logs.length > 0);
-    } catch (err) { toast.error('Deal not found'); navigate('/dashboard'); }
+    } catch { toast.error('Deal not found'); navigate('/dashboard'); }
     finally { setLoading(false); }
-  }
+  }, [id, navigate]);
+
+  useEffect(() => {
+    Promise.resolve().then(() => fetchDeal());
+  }, [fetchDeal]);
 
   const shareUrl = deal?.share_token ? `${window.location.origin}/deal/${deal.share_token}` : '';
 
@@ -53,27 +57,24 @@ export default function DealDetails() {
   async function handlePayment() {
     setActionLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      // Calls the existing Moolre sandbox integration to create a payment link.
-      // Edge function moolre-init-payment uses sandbox credentials — no production keys.
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/moolre-init-payment`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session?.access_token}`,
-          },
-          body: JSON.stringify({
-            deal_id: deal.id,
-            redirect_url: `${window.location.origin}/deals/${deal.id}`,
-          }),
-        }
-      );
-      const resBody = await res.json();
-      if (!res.ok) throw new Error(resBody.error || 'Failed to initiate payment');
-
-      window.location.href = resBody.authorization_url;
+      await startPayment({
+        deal,
+        onPaid: async () => {
+          toast.success('Payment received! Verifying with Paystack...');
+          try {
+            await checkPayment(deal.id);
+            toast.success('Payment confirmed! Funds are now in escrow.');
+            fetchDeal();
+          } catch {
+            toast.error('Payment received but verification pending. Use "Check Payment Status".');
+            fetchDeal();
+          }
+        },
+        onAbandoned: () => {
+          toast('Payment window closed. You can retry anytime.', { icon: <Info size={16} /> });
+          fetchDeal();
+        },
+      });
     } catch (err) {
       console.error(err);
       toast.error(err.message || 'Something went wrong');
@@ -85,60 +86,17 @@ export default function DealDetails() {
   async function handleVerifyPayment() {
     setActionLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/moolre-webhook`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session?.access_token}`,
-          },
-          body: JSON.stringify({
-            externalref: deal.payment_reference,
-            data: { reference: deal.moolre_reference || deal.payment_reference },
-          }),
-        }
-      );
-      const resBody = await res.json();
-      if (resBody.processed) {
+      const result = await checkPayment(deal.id);
+      if (result.payment_confirmed) {
         toast.success('Payment confirmed! Funds are now in escrow.');
         fetchDeal();
-      } else if (resBody.reason && resBody.reason !== 'Payment not successful') {
-        toast(resBody.reason, { icon: <Info size={16} /> });
-        fetchDeal();
       } else {
-        const forceConfirm = window.confirm(
-          'Payment status could not be verified automatically. If you have already paid, click OK to manually confirm.'
-        );
-        if (forceConfirm) {
-          const confirmRes = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/moolre-webhook`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${session?.access_token}`,
-              },
-              body: JSON.stringify({
-                externalref: deal.payment_reference,
-                data: { reference: deal.moolre_reference || deal.payment_reference },
-                manual_confirm: true,
-              }),
-            }
-          );
-          const confirmBody = await confirmRes.json();
-          if (confirmBody.processed) {
-            toast.success('Payment confirmed manually!');
-            fetchDeal();
-          } else {
-            toast.error('Manual confirmation failed. Please try again.');
-          }
-        }
+        toast(result.message || 'Payment not yet completed.', { icon: <Info size={16} /> });
+        fetchDeal();
       }
     } catch (err) {
       console.error(err);
-      toast.error('Failed to check payment status. Please try again.');
+      toast.error(err.message || 'Failed to check payment status. Please try again.');
     } finally {
       setActionLoading(false);
     }
@@ -206,7 +164,6 @@ export default function DealDetails() {
   const isBuyer = profile?.id === deal.buyer_id;
   const isSeller = profile?.id === deal.seller_id;
   const isCreator = deal.creator_role === 'BUYER' ? isBuyer : isSeller;
-  const counterpartyJoined = deal.creator_role === 'BUYER' ? !!deal.seller_id : !!deal.buyer_id;
   const canShare = isCreator && deal.status === DEAL_STATUS.AWAITING_COUNTERPARTY;
   const joinRole = deal.creator_role === 'BUYER' ? 'Seller' : 'Buyer';
 
@@ -325,9 +282,9 @@ export default function DealDetails() {
 
               {deal.status === DEAL_STATUS.AWAITING_PAYMENT && isBuyer && !deal.payment_reference && (
                 <div className="action-wrapper">
-                  <p className="action-hint">Fund the escrow to secure this transaction.</p>
-                  <button className="btn btn-primary btn-full btn-lg action-btn" onClick={handlePayment} disabled={actionLoading}>
-                    {actionLoading ? <><span className="spinner spinner-sm"></span> Initializing...</> : <><span className="btn-icon"><CreditCard size={16} /></span> Pay with Moolre</>}
+                  <p className="action-hint">Fund the escrow to secure this transaction. Pay securely with Paystack (card or mobile money).</p>
+                  <button className="btn btn-primary btn-full btn-lg action-btn" onClick={handlePayment} disabled={actionLoading || paying}>
+                    {actionLoading || paying ? <><span className="spinner spinner-sm"></span> Initializing...</> : <><span className="btn-icon"><CreditCard size={16} /></span> Pay with Paystack</>}
                   </button>
                   <button className="btn btn-outline btn-full action-btn" onClick={handleCancelDeal} disabled={actionLoading}>
                     Cancel Deal
@@ -340,12 +297,12 @@ export default function DealDetails() {
                   <div className="status-notice notice-warning" style={{marginBottom: '12px'}}>
                   <div className="notice-icon"><Clock size={20} /></div>
                   <div className="notice-content">
-                    <h4>Payment Processing</h4>
-                      <p>Your payment is still being processed. Please wait a moment and click the button below to check the status again.</p>
+                    <h4>Payment {deal.payment_status === PAYMENT_STATUS.SUCCESS ? 'Confirmed' : 'Processing'}</h4>
+                      <p>Your payment is being confirmed. Click the button below to check the status again.</p>
                     </div>
                   </div>
-                  <button className="btn btn-primary btn-full action-btn" onClick={handleVerifyPayment} disabled={actionLoading}>
-                    {actionLoading ? <><span className="spinner spinner-sm"></span> Checking...</> : 'Check Payment Status'}
+                  <button className="btn btn-primary btn-full action-btn" onClick={handleVerifyPayment} disabled={actionLoading || checking}>
+                    {actionLoading || checking ? <><span className="spinner spinner-sm"></span> Checking...</> : 'Check Payment Status'}
                   </button>
                   <button className="btn btn-outline btn-full action-btn" onClick={handleCancelDeal} disabled={actionLoading}>
                     Cancel Deal

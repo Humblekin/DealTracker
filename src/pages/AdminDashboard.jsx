@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import StatusBadge from '../components/StatusBadge';
+import PaymentStatusBadge from '../components/PaymentStatusBadge';
 import { formatGHS } from '../utils/fees';
 import { DEAL_STATUS } from '../utils/constants';
 import { DollarSign } from 'lucide-react';
@@ -81,22 +82,40 @@ export default function AdminDashboard() {
 
   async function handleForceRelease(dealId) {
     const deal = deals.find(d => d.id === dealId);
-    const payoutInfo = deal?.seller_profile?.phone
-      ? `${deal.seller_profile?.full_name} on ${deal.seller_profile?.network?.toUpperCase()} (${deal.seller_profile?.phone})`
-      : 'the seller';
-    if (!window.confirm(`Have you sent GH₵ ${parseFloat(deal?.amount || 0).toFixed(2)} to ${payoutInfo}? Click OK only after you have manually transferred the money.`)) return;
+    if (!deal?.seller_profile?.phone || !deal?.seller_profile?.network) {
+      toast.error('Seller has not configured payout details (phone + network). Cannot send payout.');
+      return;
+    }
+    const payoutAmount = parseFloat(deal.net_amount || deal.amount || 0);
+    if (!window.confirm(`Send GH₵ ${payoutAmount.toFixed(2)} to ${deal.seller_profile.full_name || 'the seller'} via Paystack (${deal.seller_profile.network.toUpperCase()} ${deal.seller_profile.phone})?`)) return;
     setActionLoading(dealId);
     try {
-      await supabase.from('deals').update({ status: DEAL_STATUS.COMPLETED }).eq('id', dealId);
-      await supabase.from('disputes').update({ status: 'RESOLVED', admin_decision: 'Released to seller' }).eq('deal_id', dealId).eq('status', 'OPEN');
-      await supabase.from('audit_logs').insert({ deal_id: dealId, action: 'ADMIN_MANUAL_RELEASE', actor_id: profile.id, details: { note: 'Admin confirmed manual payout sent' } });
-      await supabase.from('notifications').insert([
-        { user_id: deal.seller_id, title: 'Payment Sent!', message: `Funds for "${deal.title}" have been sent.`, type: 'payment', deal_id: dealId },
-        { user_id: deal.buyer_id, title: 'Deal Complete', message: `"${deal.title}" is complete. Your funds have been released to the seller.`, type: 'info', deal_id: dealId },
-      ]);
-      toast.success('Deal completed and seller notified.');
+      const { data, error } = await supabase.functions.invoke('paystack-payout', {
+        body: {
+          deal_id: dealId,
+          amount: payoutAmount,
+          phone: deal.seller_profile.phone,
+          network: deal.seller_profile.network,
+          narration: `DealGuider payout for "${deal.title}"`,
+        },
+      });
+      if (error) throw error;
+      if (data?.success) {
+        toast.success('Payout sent to seller via Paystack.');
+      }
       loadAll();
-    } catch (err) { console.error(err); toast.error('Operation failed. Please try again.'); }
+    } catch (err) {
+      console.error(err);
+      let msg = err?.message || 'Payout failed. Please try again.';
+      const res = err?.context?.response;
+      if (res) {
+        try {
+          const body = await res.json();
+          if (body?.error) msg = body.error;
+        } catch { /* ignore */ }
+      }
+      toast.error(msg);
+    }
     finally { setActionLoading(null); }
   }
 
@@ -349,16 +368,17 @@ export default function AdminDashboard() {
                 </div>
                 <div className="table-wrapper">
                   <table className="data-table">
-                    <thead><tr><th>Title</th><th>Amount</th><th>Status</th></tr></thead>
+                    <thead><tr><th>Title</th><th>Amount</th><th>Status</th><th>Payment</th></tr></thead>
                     <tbody>
                       {deals.slice(0, 5).map(d => (
                         <tr key={d.id}>
                           <td><Link to={`/deals/${d.id}`}>{d.title}</Link></td>
                           <td style={{fontFamily:'var(--font-display)', fontWeight:600}}>{formatGHS(d.amount)}</td>
                           <td><StatusBadge status={d.status} /></td>
+                          <td><PaymentStatusBadge status={d.payment_status} /></td>
                         </tr>
                       ))}
-                      {deals.length === 0 && <tr><td colSpan={3} className="empty-cell">No deals yet</td></tr>}
+                      {deals.length === 0 && <tr><td colSpan={4} className="empty-cell">No deals yet</td></tr>}
                     </tbody>
                   </table>
                 </div>
@@ -370,7 +390,7 @@ export default function AdminDashboard() {
         {tab === 'deals' && (
           <div className="table-wrapper">
             <table className="data-table">
-              <thead><tr><th>Title</th><th>Creator</th><th>Buyer</th><th>Seller</th><th>Amount</th><th>Profit</th><th>Status</th><th>Actions</th></tr></thead>
+              <thead><tr><th>Title</th><th>Creator</th><th>Buyer</th><th>Seller</th><th>Amount</th><th>Profit</th><th>Status</th><th>Payment</th><th>Actions</th></tr></thead>
               <tbody>
                 {deals.map(d => (
                   <tr key={d.id}>
@@ -388,9 +408,10 @@ export default function AdminDashboard() {
                         : '—'}
                     </td>
                     <td><StatusBadge status={d.status} /></td>
+                    <td><PaymentStatusBadge status={d.payment_status} /></td>
                     <td>
                       <div className="admin-actions">
-                        {[DEAL_STATUS.IN_ESCROW, DEAL_STATUS.DISPUTED].includes(d.status) && (
+                        {[DEAL_STATUS.IN_ESCROW, DEAL_STATUS.DISPUTED, DEAL_STATUS.DELIVERED].includes(d.status) && (
                           <>
                             <button className="btn btn-sm btn-success" onClick={() => handleForceRelease(d.id)} disabled={actionLoading === d.id}>Release</button>
                             <button className="btn btn-sm btn-danger" onClick={() => handleForceRefund(d.id)} disabled={actionLoading === d.id}>Refund</button>

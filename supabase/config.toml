@@ -1,0 +1,22 @@
+project_id = "deal-tracker"
+
+# Server-to-server functions that authenticate without a Supabase JWT:
+# Paystack webhook uses X-Paystack-Signature; merchant EaaS functions use X-Api-Key.
+# verify_jwt must be false or the platform returns 401 before the function runs.
+[functions.paystack-webhook]
+verify_jwt = false
+
+[functions.merchant-create-escrow]
+verify_jwt = false
+
+[functions.merchant-verify-payment]
+verify_jwt = false
+
+[functions.merchant-release-funds]
+verify_jwt = false
+
+[functions.merchant-get-transaction]
+verify_jwt = false
+
+[functions.merchant-confirm-shipment]
+verify_jwt = false

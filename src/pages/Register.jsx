@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
+import { User, Mail, Lock, ShieldCheck, Eye, EyeOff } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
 import toast from 'react-hot-toast';
 import './Auth.css';
 
@@ -10,6 +10,8 @@ export default function Register() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '', email: '', password: '', confirmPassword: '',
   });
@@ -37,7 +39,10 @@ export default function Register() {
     <div className="auth-page">
       <div className="auth-bg-effects">
         <div className="auth-grid"></div>
+        <div className="auth-glow-ring"></div>
         <div className="auth-orb orb-primary"></div>
+        <div className="auth-orb orb-secondary"></div>
+        <div className="auth-orb orb-tertiary"></div>
       </div>
       <div className="auth-container">
         <div className="auth-card glass-card">
@@ -53,7 +58,7 @@ export default function Register() {
                   </linearGradient>
                 </defs>
               </svg>
-              <span>Secure<span className="brand-accent">Trade</span></span>
+              <span>Deal<span className="brand-accent">Guider</span></span>
             </Link>
             <h1>Create Account</h1>
             <p>Join the secure trading infrastructure</p>
@@ -62,25 +67,53 @@ export default function Register() {
           <form onSubmit={handleSubmit} className="auth-form">
             <div className="form-group">
               <label className="form-label" htmlFor="reg-name">Legal Name</label>
-              <input id="reg-name" type="text" name="fullName" className="form-input" placeholder="Kwame Asante" value={formData.fullName} onChange={handleChange} required />
-            </div>
-            
-            <div className="form-group">
-              <label className="form-label" htmlFor="reg-email">Email Address</label>
-              <input id="reg-email" type="email" name="email" className="form-input" placeholder="name@company.com" value={formData.email} onChange={handleChange} required />
-            </div>
-            
-            <div className="form-group">
-              <label className="form-label" htmlFor="reg-password">Password</label>
-              <input id="reg-password" type="password" name="password" className="form-input" placeholder="Min 8 chars, uppercase, number" value={formData.password} onChange={handleChange} required minLength={8} />
-            </div>
-            
-            <div className="form-group">
-              <label className="form-label" htmlFor="reg-confirm">Confirm Password</label>
-              <input id="reg-confirm" type="password" name="confirmPassword" className="form-input" placeholder="••••••••" value={formData.confirmPassword} onChange={handleChange} required />
+              <div className="auth-input-wrap">
+                <User size={18} aria-hidden="true" />
+                <input id="reg-name" type="text" name="fullName" className="form-input" placeholder="Kwame Asante" autoComplete="name" value={formData.fullName} onChange={handleChange} required />
+              </div>
             </div>
 
-            <button type="submit" className="btn btn-primary btn-full btn-lg" disabled={loading}>
+            <div className="form-group">
+              <label className="form-label" htmlFor="reg-email">Email Address</label>
+              <div className="auth-input-wrap">
+                <Mail size={18} aria-hidden="true" />
+                <input id="reg-email" type="email" name="email" className="form-input" placeholder="name@company.com" autoComplete="email" value={formData.email} onChange={handleChange} required />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label" htmlFor="reg-password">Password</label>
+              <div className="auth-input-wrap">
+                <Lock size={18} aria-hidden="true" />
+                <input id="reg-password" type={showPassword ? 'text' : 'password'} name="password" className="form-input" placeholder="Min 8 chars, uppercase, number" autoComplete="new-password" value={formData.password} onChange={handleChange} required minLength={8} />
+                <button
+                  type="button"
+                  className="auth-eye"
+                  onClick={() => setShowPassword((s) => !s)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label" htmlFor="reg-confirm">Confirm Password</label>
+              <div className="auth-input-wrap">
+                <ShieldCheck size={18} aria-hidden="true" />
+                <input id="reg-confirm" type={showConfirm ? 'text' : 'password'} name="confirmPassword" className="form-input" placeholder="••••••••" autoComplete="new-password" value={formData.confirmPassword} onChange={handleChange} required />
+                <button
+                  type="button"
+                  className="auth-eye"
+                  onClick={() => setShowConfirm((s) => !s)}
+                  aria-label={showConfirm ? 'Hide password' : 'Show password'}
+                >
+                  {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
+
+            <button type="submit" className="btn btn-primary btn-auth btn-full btn-lg" disabled={loading}>
               {loading ? <><span className="spinner spinner-sm"></span>Processing...</> : 'Open Account'}
             </button>
           </form>

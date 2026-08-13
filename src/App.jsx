@@ -1,18 +1,29 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
-import Landing from './pages/Landing';
-import Login from './pages/Login';
-import Register from './pages/Register';
+
+const Landing = lazy(() => import('./pages/Landing'));
+const Login = lazy(() => import('./pages/Login'));
+const Register = lazy(() => import('./pages/Register'));
 import Dashboard from './pages/Dashboard';
-import CreateDeal from './pages/CreateDeal';
-import DealDetails from './pages/DealDetails';
-import SharedDeal from './pages/SharedDeal';
-import Transactions from './pages/Transactions';
-import AdminDashboard from './pages/AdminDashboard';
-import DeveloperAPI from './pages/DeveloperAPI';
+const CreateDeal = lazy(() => import('./pages/CreateDeal'));
+const DealDetails = lazy(() => import('./pages/DealDetails'));
+const SharedDeal = lazy(() => import('./pages/SharedDeal'));
+const Transactions = lazy(() => import('./pages/Transactions'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const DeveloperAPI = lazy(() => import('./pages/DeveloperAPI'));
+
+function PageLoader() {
+  return (
+    <div className="loading-screen">
+      <div className="spinner"></div>
+      <p>Loading...</p>
+    </div>
+  );
+}
 
 export default function App() {
   return (
@@ -32,6 +43,7 @@ export default function App() {
             error: { iconTheme: { primary: '#ef4444', secondary: '#fff' } },
           }}
         />
+        <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route element={<Layout />}>
             <Route path="/" element={<Landing />} />
@@ -47,6 +59,7 @@ export default function App() {
             <Route path="/admin/:tab" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
           </Route>
         </Routes>
+        </Suspense>
       </AuthProvider>
     </BrowserRouter>
   );

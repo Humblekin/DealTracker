@@ -11,7 +11,7 @@ export default function FeeBreakdown({ fees, expanded = false }) {
         <span className="fee-value">{formatGHS(fees.dealAmount)}</span>
       </div>
       <div className="fee-row sub">
-        <span className="fee-label">Moolre Processing Fee</span>
+        <span className="fee-label">Payment Processing Fee</span>
         <span className="fee-value dim">Included</span>
       </div>
       <div className="fee-row sub">

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import { CheckCircle, PartyPopper, XCircle, Clock, Key, RefreshCw, ClipboardList, Plus, Trash2, Copy } from 'lucide-react';
 import toast from 'react-hot-toast';
 import './DeveloperAPI.css';
@@ -30,7 +30,7 @@ const endpoints = [
       '  "transaction_id": "uuid",',
       '  "deal_id": "uuid",',
       '  "status": "AWAITING_PAYMENT",',
-      '  "payment_url": "https://api.moolre.com/pay/...",',
+      '  "payment_url": "https://checkout.paystack.com/...",',
       '  "amount": 150.00,',
       '  "currency": "GHS",',
       '  "platform_fee": 4.50,',
@@ -204,30 +204,38 @@ function DeveloperDashboard() {
   const [showKeyModal, setShowKeyModal] = useState(false)
   const [showNewKeyForm, setShowNewKeyForm] = useState(false)
   const [keyForm, setKeyForm] = useState({ name: '', environment: 'test' })
-
-  async function loadMerchantData() {
-    setLoading(true)
-    try {
-      const token = await getAccessToken()
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/merchant-check-status`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      const data = await res.json()
-      console.log('merchant-check-status response:', res.status, data)
-      if (data.applied && data.merchant) {
-        setMerchant(data.merchant)
-        if (data.merchant.status === 'ACTIVE') loadKeys()
-      }
-    } catch (err) {
-      console.error('Failed to load merchant data:', err)
-    } finally {
-      setLoading(false)
-    }
-  }
+  const [refreshKey, setRefreshKey] = useState(0)
 
   useEffect(() => {
-    if (user) loadMerchantData()
-  }, [user])
+    if (!user) return
+    let cancelled = false
+
+    const run = () => {
+      setLoading(true)
+      getAccessToken()
+        .then(token => fetch(`${SUPABASE_URL}/functions/v1/merchant-check-status`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }))
+        .then(res => res.json())
+        .then(data => {
+          if (cancelled) return
+          console.log('merchant-check-status response:', data)
+          if (data.applied && data.merchant) {
+            setMerchant(data.merchant)
+            if (data.merchant.status === 'ACTIVE') loadKeys()
+          }
+        })
+        .catch(err => console.error('Failed to load merchant data:', err))
+        .finally(() => { if (!cancelled) setLoading(false) })
+    }
+
+    Promise.resolve().then(run)
+    return () => { cancelled = true }
+    // loadKeys and getAccessToken are recreated on each render; including them
+    // would re-run this effect on every state change. The refreshKey trigger
+    // reloads merchant data after apply/submit actions.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, refreshKey])
 
   async function loadKeys() {
     try {
@@ -263,7 +271,7 @@ function DeveloperDashboard() {
       if (!res.ok) throw new Error(data.error)
       toast.success(data.message || 'Application submitted!')
       setShowApplyForm(false)
-      loadMerchantData()
+      setRefreshKey(k => k + 1)
     } catch (err) {
       toast.error(err.message || 'Failed to submit application.')
     } finally {
@@ -725,7 +733,7 @@ export default function DeveloperAPI() {
                 <div className="webhook-row"><code className="webhook-event">401</code><span>Unauthorized — Missing or invalid API key</span></div>
                 <div className="webhook-row"><code className="webhook-event">404</code><span>Not Found — Transaction or deal not found</span></div>
                 <div className="webhook-row"><code className="webhook-event">409</code><span>Conflict — Duplicate order, double payout, or invalid state transition</span></div>
-                <div className="webhook-row"><code className="webhook-event">502</code><span>Bad Gateway — Payment provider error (Moolre)</span></div>
+                <div className="webhook-row"><code className="webhook-event">502</code><span>Bad Gateway — Payment provider error (Paystack)</span></div>
               </div>
             </section>
 

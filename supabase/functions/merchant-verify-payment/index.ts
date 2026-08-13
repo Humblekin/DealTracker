@@ -2,7 +2,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.106.2'
 import { corsHeaders, handleCors, methodNotAllowed } from '../_shared/cors.ts'
 import { authenticateMerchant, AuthError } from '../_shared/merchant-auth.ts'
-import { verifyPayment } from '../_shared/moolre-client.ts'
+import { verifyPayment } from '../_shared/paystack.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -36,7 +36,7 @@ serve(async (req) => {
     // Find transaction
     let query = supabase
       .from('merchant_transactions')
-      .select('*, deal:deals!deal_id(id, status, payment_reference, moolre_reference, amount)')
+      .select('*, deal:deals!deal_id(id, status, payment_reference, paystack_reference, amount)')
       .eq('merchant_id', auth.merchantId)
 
     if (transaction_id) {
@@ -62,13 +62,13 @@ serve(async (req) => {
         amount: parseFloat(transaction.amount),
         currency: transaction.currency,
         customer_email: transaction.customer_email,
-        moolre_payment_url: transaction.moolre_payment_url,
+        payment_url: transaction.payment_url,
       }), { headers: cors })
     }
 
-    // Verify with Moolre
-    const moolreRef = transaction.deal?.moolre_reference || transaction.deal?.payment_reference
-    if (!moolreRef) {
+    // Verify with Paystack
+    const paystackRef = transaction.deal?.paystack_reference || transaction.deal?.payment_reference
+    if (!paystackRef) {
       return new Response(JSON.stringify({
         success: true,
         transaction_id: transaction.id,
@@ -77,7 +77,7 @@ serve(async (req) => {
       }), { headers: cors })
     }
 
-    const verification = await verifyPayment(moolreRef)
+    const verification = await verifyPayment(paystackRef)
 
     if (verification.success) {
       // Payment confirmed — atomic update to IN_ESCROW
@@ -85,7 +85,7 @@ serve(async (req) => {
       if (deal && deal.status === 'AWAITING_PAYMENT') {
         const { data: updatedDeal, error: updateError } = await supabase
           .from('deals')
-          .update({ status: 'IN_ESCROW' })
+          .update({ status: 'IN_ESCROW', payment_status: 'SUCCESS' })
           .eq('id', deal.id)
           .eq('status', 'AWAITING_PAYMENT')
           .select('id')
@@ -107,14 +107,15 @@ serve(async (req) => {
         }
 
         await supabase.from('merchant_transactions')
-          .update({ status: 'IN_ESCROW' })
+          .update({ status: 'IN_ESCROW', paystack_reference: paystackRef })
           .eq('id', transaction.id)
 
         await supabase.from('payments').insert({
           deal_id: deal.id,
-          moolre_reference: moolreRef,
+          paystack_reference: paystackRef,
           amount: parseFloat(deal.amount),
           status: 'SUCCESS',
+          paystack_status: 'SUCCESS',
         })
 
         await supabase.from('audit_logs').insert({
@@ -151,7 +152,8 @@ serve(async (req) => {
       amount: parseFloat(transaction.amount),
       currency: transaction.currency,
       payment_confirmed: false,
-      moolre_payment_url: transaction.moolre_payment_url,
+      payment_url: transaction.payment_url,
+      payment_status: verification.status || 'PENDING',
       message: 'Payment has not been completed yet.',
     }), { headers: cors })
 

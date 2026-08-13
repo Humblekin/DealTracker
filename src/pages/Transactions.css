@@ -17,6 +17,10 @@
   flex-wrap: wrap;
 }
 
+.filter-bar + .filter-bar {
+  margin-top: -20px;
+}
+
 .filter-btn { 
   display: flex; 
   align-items: center; 

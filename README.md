@@ -1,59 +1,65 @@
 # DealGuider (MVP)
 
-A trust-based escrow platform for safe peer-to-peer transactions in Ghana. Built with React (Vite), vanilla CSS, Supabase (Auth, PostgreSQL, Realtime), and **Moolre** for payments and payouts.
+A trust-based escrow platform for safe peer-to-peer transactions in Ghana. Built with React (Vite), vanilla CSS, Supabase (Auth, PostgreSQL, Realtime), and **Paystack** for payments and payouts.
 
 ## 🚀 Getting Started
 
 ### 1. Prerequisites
 - Node.js installed on your machine
 - A [Supabase](https://supabase.com/) account
-- A [Moolre](https://moolre.com/) account
+- A [Paystack](https://paystack.com/) account (Ghana merchant)
 
 ### 2. Environment Variables
 Create a `.env` file in the root of your project:
 ```env
 VITE_SUPABASE_URL=your_supabase_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-VITE_MOOLRE_PUBLIC_KEY=your_moolre_public_key
+VITE_PAYSTACK_PUBLIC_KEY=your_paystack_public_key
 ```
 
 ### 3. Supabase Secrets (Edge Functions)
 Set these secrets for the Edge Functions:
 ```bash
-supabase secrets set MOOLRE_API_USER=your_username
-supabase secrets set MOOLRE_PRIVATE_KEY=your_private_key
-supabase secrets set MOOLRE_PUBLIC_KEY=your_public_key
-supabase secrets set MOOLRE_ACCOUNT_NUMBER=your_account_number
-supabase secrets set MOOLRE_BASE_URL=https://api.moolre.com
+supabase secrets set PAYSTACK_SECRET_KEY=sk_live_xxxxxxxxxxxx
 ```
 
 ### 4. Supabase Database Setup
 1. Go to your Supabase Dashboard → SQL Editor.
-2. Copy the contents of `supabase_schema.sql` and run it.
-3. This creates all tables, triggers, and RLS policies.
+2. Copy the contents of `supabase_schema.sql` and run it (fresh installs).
+3. For an existing database, run `supabase/migrations/20260812000000_paystack-migration.sql` to add the Paystack columns.
 
 ### 5. Deploy Edge Functions
 ```bash
 # Core escrow functions
 supabase functions deploy join-deal
-supabase functions deploy moolre-init-payment
-supabase functions deploy moolre-webhook
+supabase functions deploy paystack-init-payment
+supabase functions deploy paystack-webhook
+supabase functions deploy paystack-verify
 supabase functions deploy confirm-delivery
-supabase functions deploy moolre-payout
+supabase functions deploy paystack-payout
 
 # Merchant integration functions
 supabase functions deploy merchant-register
 supabase functions deploy merchant-apply
-supabase functions deploy merchant-generate-api-key
+supabase functions deploy merchant-check-status
+supabase functions deploy create-api-key
+supabase functions deploy merchant-list-keys
+supabase functions deploy merchant-disable-key
 supabase functions deploy merchant-create-escrow
 supabase functions deploy merchant-verify-payment
 supabase functions deploy merchant-confirm-shipment
 supabase functions deploy merchant-release-funds
 supabase functions deploy merchant-get-transaction
-supabase functions deploy merchant-webhook
 ```
 
-### 6. Running the App
+### 6. Configure the Paystack Webhook
+In the Paystack Dashboard → Settings → Webhooks, point the webhook URL to:
+```
+https://[PROJECT].supabase.co/functions/v1/paystack-webhook
+```
+(One webhook URL per environment — this single endpoint handles both consumer and merchant deals.)
+
+### 7. Running the App
 ```bash
 npm install
 npm run dev
@@ -62,46 +68,51 @@ npm run dev
 ## 🔐 Architecture
 
 ```
-Buyer pays via Moolre
-  → Moolre webhook updates Supabase DB
+Buyer pays via Paystack (inline popup)
+  → Paystack calls paystack-webhook (HMAC-SHA512 verified)
   → status = IN_ESCROW
   → Buyer confirms delivery
-  → Edge Function triggers Moolre payout
+  → Edge Function triggers Paystack Transfer (mobile money)
   → status = COMPLETED
 ```
 
 **Supabase** = escrow brain (truth source)
-**Moolre** = money movement tool
+**Paystack** = money movement tool
 **Frontend** = interaction layer
 
 ## Edge Functions
 
 | Function | Purpose |
-|---|---|---|
+|---|---|
 | `join-deal` | Counterparty joins a deal via share link, advances to AWAITING_PAYMENT |
-| `moolre-init-payment` | Creates Moolre payment request, returns checkout URL |
-| `moolre-webhook` | Receives Moolre payment confirmation, sets status to IN_ESCROW |
-| `confirm-delivery` | Buyer confirms delivery → triggers Moolre payout → COMPLETED |
-| `moolre-payout` | Manual admin payout trigger |
+| `paystack-init-payment` | Initializes a Paystack checkout session, returns authorization URL + access code |
+| `paystack-webhook` | Single webhook endpoint: verifies signature, advances escrow on `charge.success`, records transfers |
+| `paystack-verify` | Manual "check payment status" — queries Paystack and advances escrow if confirmed |
+| `confirm-delivery` | Buyer confirms delivery → triggers Paystack Transfer to seller → COMPLETED |
+| `paystack-payout` | Admin-only: manual payout trigger via Paystack Transfers |
 | `merchant-apply` | Public: e-commerce platform submits application for API access (status=PENDING) |
-| `merchant-generate-api-key` | Admin-only: generate API key for an approved (ACTIVE) merchant |
+| `merchant-check-status` | Authenticated merchant: check application/merchant status |
+| `create-api-key` | Admin/merchant: generate an API key for an ACTIVE merchant |
+| `merchant-list-keys` | Merchant: list their API keys |
+| `merchant-disable-key` | Merchant: revoke an API key |
 | `merchant-register` | Admin-only: register a merchant and generate API key (status=ACTIVE, pre-approved) |
-| `merchant-create-escrow` | Creates an escrow deal from a merchant order, returns Moolre payment URL |
+| `merchant-create-escrow` | Creates an escrow deal from a merchant order, returns Paystack payment URL |
 | `merchant-verify-payment` | Checks payment status, auto-advances to IN_ESCROW if confirmed |
 | `merchant-confirm-shipment` | Merchant confirms order has been shipped |
-| `merchant-release-funds` | Triggers Moolre payout to merchant wallet |
+| `merchant-release-funds` | Triggers Paystack Transfer to merchant mobile money |
 | `merchant-get-transaction` | Returns full transaction details with timeline and audit logs |
-| `merchant-webhook` | Handles Moolre payment callbacks for merchant deals |
 
 ## 🔐 Security
 - **Edge Functions** authenticate users via Supabase Auth before any action
-- **Merchant API** authenticates via SHA-256 hashed API keys (format: `dg_{prefix}_{secret}`)
+- **Paystack webhook** verifies the `X-Paystack-Signature` header (HMAC-SHA512) before processing
+- **Merchant API** authenticates via SHA-256 hashed API keys (format: `dg_{environment}_{prefix}_{secret}`)
 - **RLS policies** protect all tables at the database level
 - **Immutable audit logs** — cannot be updated or deleted
 - **Service Role Key** is never exposed to the frontend
-- **Webhook signatures** — all merchant webhooks include HMAC-SHA256 signature in `X-DealGuider-Signature` header
+- **Merchant webhooks** include HMAC-SHA256 signature in `X-DealGuider-Signature` header
 - **Idempotency** — merchant-create-escrow supports idempotency keys to prevent duplicate escrows
 - **Double payout prevention** — audit log check prevents releasing funds twice for the same deal
+- **Atomic transitions** — escrow state advances with conditional `.eq('status', …)` updates to prevent race conditions
 
 ## 💰 Fee Engine
 `src/utils/fees.js` handles all fee calculations:
@@ -142,11 +153,11 @@ X-Api-Key: dg_a1b2c3d4_e5f6...secret
 
 ```
 1. Customer places order on merchant platform
-2. Merchant calls POST merchant-create-escrow → receives Moolre payment URL
-3. Merchant redirects customer to Moolre payment page
-4. Customer pays → Moolre calls merchant-webhook → deal → IN_ESCROW
+2. Merchant calls POST merchant-create-escrow → receives Paystack payment URL
+3. Merchant redirects customer to Paystack checkout
+4. Customer pays → Paystack calls paystack-webhook → deal → IN_ESCROW
 5. Merchant ships item → calls POST merchant-confirm-shipment
-6. Merchant calls POST merchant-release-funds → Moolre payout → COMPLETED
+6. Merchant calls POST merchant-release-funds → Paystack Transfer → COMPLETED
 7. Merchant receives webhook notification at each state change
 ```
 

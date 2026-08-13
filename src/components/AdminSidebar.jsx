@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 import './AdminSidebar.css';
 
 const ADMIN_NAV = [
@@ -30,7 +30,6 @@ const ADMIN_NAV = [
 export default function AdminSidebar() {
   const { profile, signOut } = useAuth();
   const location = useLocation();
-  const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
 
   const isActive = (path, exact) => {

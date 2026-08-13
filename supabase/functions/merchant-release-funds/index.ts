@@ -2,7 +2,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.106.2'
 import { corsHeaders, handleCors, methodNotAllowed } from '../_shared/cors.ts'
 import { authenticateMerchant, AuthError } from '../_shared/merchant-auth.ts'
-import { sendPayout } from '../_shared/moolre-client.ts'
+import { createTransferRecipient, initiateTransfer } from '../_shared/paystack.ts'
 import { deliverWebhook } from '../_shared/webhook.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
@@ -37,7 +37,7 @@ serve(async (req) => {
     // Find transaction
     let query = supabase
       .from('merchant_transactions')
-      .select('*, deal:deals!deal_id(id, status, amount, net_amount, platform_fee, fee_breakdown, moolre_reference)')
+      .select('*, deal:deals!deal_id(id, status, amount, net_amount, platform_fee, fee_breakdown, paystack_reference)')
       .eq('merchant_id', auth.merchantId)
 
     if (transaction_id) {
@@ -83,14 +83,13 @@ serve(async (req) => {
     }
 
     const payoutAmount = parseFloat(transaction.deal.net_amount || transaction.deal.amount)
-    const payoutRef = `MPO-${transaction.deal_id}-${Date.now()}`
 
     // Check for existing payout in audit logs to prevent double payout
     const { data: existingPayout } = await supabase
       .from('audit_logs')
       .select('id')
       .eq('deal_id', transaction.deal_id)
-      .eq('action', 'MERCHANT_FUNDS_RELEASED')
+      .in('action', ['MERCHANT_FUNDS_RELEASED', 'PAYOUT_TRANSFER_SUCCESS'])
       .limit(1)
 
     if (existingPayout && existingPayout.length > 0) {
@@ -99,13 +98,42 @@ serve(async (req) => {
       }), { status: 409, headers: cors })
     }
 
-    // Process payout via Moolre
-    const payoutResult = await sendPayout({
-      amount: payoutAmount,
-      recipientPhone: phone,
+    const reference = `MPO-${transaction.deal_id}-${Date.now()}`
+
+    // Create recipient + initiate transfer via Paystack
+    const recipient = await createTransferRecipient({
+      name: `Merchant ${auth.merchant.name} order #${transaction.merchant_order_id}`,
+      phone,
       network,
-      narration: `DealGuider payout for order #${transaction.merchant_order_id}`,
-      reference: payoutRef,
+    })
+
+    if (!recipient.success || !recipient.recipient_code) {
+      await supabase.from('audit_logs').insert({
+        deal_id: transaction.deal_id,
+        action: 'MERCHANT_PAYOUT_FAILED',
+        actor_id: null,
+        details: {
+          merchant_id: auth.merchantId,
+          transaction_id: transaction.id,
+          error: recipient.error,
+          reference,
+          phone,
+          network,
+          stage: 'recipient',
+        },
+      })
+
+      return new Response(JSON.stringify({
+        error: `Payout failed: ${recipient.error}`,
+        transaction_id: transaction.id,
+      }), { status: 502, headers: cors })
+    }
+
+    const payoutResult = await initiateTransfer({
+      amount: payoutAmount,
+      recipientCode: recipient.recipient_code,
+      reason: `DealGuider payout for order #${transaction.merchant_order_id}`,
+      reference,
     })
 
     if (!payoutResult.success) {
@@ -117,9 +145,10 @@ serve(async (req) => {
           merchant_id: auth.merchantId,
           transaction_id: transaction.id,
           error: payoutResult.error,
-          reference: payoutRef,
+          reference,
           phone,
           network,
+          stage: 'transfer',
         },
       })
 
@@ -149,6 +178,8 @@ serve(async (req) => {
           merchant_id: auth.merchantId,
           transaction_id: transaction.id,
           payout_reference: payoutResult.reference,
+          transfer_code: payoutResult.transfer_code,
+          recipient_code: recipient.recipient_code,
           error: 'Deal was not in DELIVERED status',
         },
       })
@@ -172,6 +203,8 @@ serve(async (req) => {
         transaction_id: transaction.id,
         merchant_order_id: transaction.merchant_order_id,
         payout_reference: payoutResult.reference,
+        transfer_code: payoutResult.transfer_code,
+        recipient_code: recipient.recipient_code,
         amount: payoutAmount,
         phone,
         network,
@@ -207,6 +240,7 @@ serve(async (req) => {
       status: 'COMPLETED',
       amount_released: payoutAmount,
       payout_reference: payoutResult.reference,
+      transfer_code: payoutResult.transfer_code,
       message: 'Funds have been released to the merchant.',
     }), { headers: cors })
 

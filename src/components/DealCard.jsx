@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import StatusBadge from './StatusBadge';
+import PaymentStatusBadge from './PaymentStatusBadge';
 import { formatGHS } from '../utils/fees';
 import './DealCard.css';
 
@@ -52,6 +53,12 @@ export default function DealCard({ deal, userId }) {
               })}
             </span>
           </div>
+          {deal.payment_status && (
+            <div className="deal-meta-item">
+              <span className="meta-label">Payment</span>
+              <span className="meta-value"><PaymentStatusBadge status={deal.payment_status} /></span>
+            </div>
+          )}
         </div>
         <div className="deal-card-arrow">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>

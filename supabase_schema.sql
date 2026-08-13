@@ -36,7 +36,10 @@ CREATE TABLE IF NOT EXISTS public.deals (
   platform_fee DECIMAL(12,2) DEFAULT 0,
   fee_breakdown JSONB,
   payment_reference TEXT,
-  moolre_reference TEXT,
+  paystack_reference TEXT,
+  payment_status TEXT NOT NULL DEFAULT 'INITIALIZED' CHECK (payment_status IN (
+    'INITIALIZED', 'PENDING', 'PROCESSING', 'SUCCESS', 'FAILED', 'ABANDONED', 'REVERSED'
+  )),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -45,7 +48,8 @@ CREATE TABLE IF NOT EXISTS public.deals (
 CREATE TABLE IF NOT EXISTS public.payments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   deal_id UUID NOT NULL REFERENCES public.deals(id),
-  moolre_reference TEXT,
+  paystack_reference TEXT,
+  paystack_status TEXT,
   amount DECIMAL(12,2) NOT NULL,
   fee_breakdown JSONB,
   status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'SUCCESS', 'FAILED')),
@@ -154,6 +158,9 @@ CREATE POLICY "Users can view all profiles" ON public.profiles
 CREATE POLICY "Users can update own profile" ON public.profiles
   FOR UPDATE USING (auth.uid() = id);
 
+CREATE POLICY "Users can create own profile" ON public.profiles
+  FOR INSERT WITH CHECK (auth.uid() = id);
+
 CREATE POLICY "Admins can update any profile" ON public.profiles
   FOR UPDATE USING (public.get_user_role() = 'admin');
 
@@ -190,7 +197,7 @@ CREATE POLICY "Admins can delete deals" ON public.deals
 -- ⚠️ STATUS TRANSITIONS are enforced by Edge Functions (service role key).
 -- The frontend can only update deals via edge functions for critical transitions:
 --   AWAITING_COUNTERPARTY → AWAITING_PAYMENT (join-deal, counterparty joins)
---   AWAITING_PAYMENT → IN_ESCROW (moolre-webhook, system)
+--   AWAITING_PAYMENT → IN_ESCROW (paystack-webhook / paystack-verify, system)
 --   IN_ESCROW → DELIVERED (confirm-delivery, buyer confirms)
 --   DELIVERED → COMPLETED (confirm-delivery, auto payout)
 --   AWAITING_COUNTERPARTY / AWAITING_PAYMENT → CANCELLED (frontend via RLS)
@@ -282,7 +289,9 @@ CREATE INDEX IF NOT EXISTS idx_deals_seller ON public.deals(seller_id);
 CREATE INDEX IF NOT EXISTS idx_deals_status ON public.deals(status);
 CREATE INDEX IF NOT EXISTS idx_deals_share_token ON public.deals(share_token);
 CREATE INDEX IF NOT EXISTS idx_deals_creator_role ON public.deals(creator_role);
+CREATE INDEX IF NOT EXISTS idx_deals_paystack_reference ON public.deals(paystack_reference);
 CREATE INDEX IF NOT EXISTS idx_payments_deal ON public.payments(deal_id);
+CREATE INDEX IF NOT EXISTS idx_payments_paystack_reference ON public.payments(paystack_reference);
 CREATE INDEX IF NOT EXISTS idx_disputes_deal ON public.disputes(deal_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON public.notifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_deal ON public.audit_logs(deal_id);
@@ -341,7 +350,8 @@ CREATE TABLE IF NOT EXISTS public.merchant_transactions (
   )),
   idempotency_key TEXT UNIQUE,
   metadata JSONB DEFAULT '{}'::jsonb,
-  moolre_payment_url TEXT,
+  payment_url TEXT,
+  paystack_reference TEXT,
   shipped_at TIMESTAMPTZ,
   delivered_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -369,6 +379,7 @@ CREATE INDEX IF NOT EXISTS idx_merchant_transactions_merchant ON public.merchant
 CREATE INDEX IF NOT EXISTS idx_merchant_transactions_deal ON public.merchant_transactions(deal_id);
 CREATE INDEX IF NOT EXISTS idx_merchant_transactions_order ON public.merchant_transactions(merchant_id, merchant_order_id);
 CREATE INDEX IF NOT EXISTS idx_merchant_transactions_idempotency ON public.merchant_transactions(idempotency_key);
+CREATE INDEX IF NOT EXISTS idx_merchant_transactions_paystack_reference ON public.merchant_transactions(paystack_reference);
 CREATE INDEX IF NOT EXISTS idx_merchant_transactions_status ON public.merchant_transactions(status);
 CREATE INDEX IF NOT EXISTS idx_merchant_webhook_logs_merchant ON public.merchant_webhook_logs(merchant_id);
 

@@ -2,7 +2,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.106.2'
 import { corsHeaders, handleCors, methodNotAllowed } from '../_shared/cors.ts'
 import { authenticateMerchant, AuthError } from '../_shared/merchant-auth.ts'
-import { initPayment } from '../_shared/moolre-client.ts'
+import { initPayment } from '../_shared/paystack.ts'
 import { calculateFees } from '../_shared/fees.ts'
 import { deliverWebhook } from '../_shared/webhook.ts'
 
@@ -38,6 +38,7 @@ serve(async (req) => {
       merchant_customer_id,
       metadata,
       idempotency_key,
+      redirect_url,
     } = await req.json()
 
     // Validate required fields
@@ -55,7 +56,7 @@ serve(async (req) => {
     if (idempotency_key) {
       const { data: existing } = await supabase
         .from('merchant_transactions')
-        .select('id, deal_id, status, moolre_payment_url')
+        .select('id, deal_id, status, payment_url')
         .eq('idempotency_key', idempotency_key)
         .single()
 
@@ -65,7 +66,7 @@ serve(async (req) => {
           transaction_id: existing.id,
           deal_id: existing.deal_id,
           status: existing.status,
-          payment_url: existing.moolre_payment_url,
+          payment_url: existing.payment_url,
           duplicate: true,
         }), { headers: cors })
       }
@@ -132,22 +133,21 @@ serve(async (req) => {
 
     if (txError) throw txError
 
-    // Initiate Moolre payment
+    // Initiate Paystack payment
     const externalRef = `MG-${deal.id}-${Date.now()}`
-    const callbackUrl = `${SUPABASE_URL}/functions/v1/merchant-webhook`
-    const redirectUrl = `${SUPABASE_URL}/functions/v1/merchant-webhook`
+    const callbackUrl = redirect_url || `${SUPABASE_URL}/functions/v1/paystack-webhook`
 
     const paymentResult = await initPayment({
       amount: parsedAmount.toString(),
       email: customer_email,
-      externalRef,
+      reference: externalRef,
       callbackUrl,
-      redirectUrl,
       metadata: {
         merchant_id: auth.merchantId,
         transaction_id: transaction.id,
         deal_id: deal.id,
         merchant_order_id,
+        provider: 'paystack',
       },
     })
 
@@ -167,7 +167,8 @@ serve(async (req) => {
     // Update transaction with payment URL
     await supabase.from('merchant_transactions')
       .update({
-        moolre_payment_url: paymentResult.authorization_url,
+        payment_url: paymentResult.authorization_url,
+        paystack_reference: paymentResult.reference || externalRef,
         status: 'AWAITING_PAYMENT',
       })
       .eq('id', transaction.id)
@@ -176,7 +177,8 @@ serve(async (req) => {
     await supabase.from('deals')
       .update({
         payment_reference: externalRef,
-        moolre_reference: paymentResult.reference || externalRef,
+        paystack_reference: paymentResult.reference || externalRef,
+        payment_status: 'PENDING',
       })
       .eq('id', deal.id)
 
@@ -191,7 +193,7 @@ serve(async (req) => {
         transaction_id: transaction.id,
         merchant_order_id,
         amount: parsedAmount,
-        moolre_reference: paymentResult.reference,
+        paystack_reference: paymentResult.reference,
       },
     })
 

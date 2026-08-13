@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import DealCard from '../components/DealCard';
 import { formatGHS } from '../utils/fees';
@@ -19,31 +19,37 @@ export default function Dashboard() {
   const [savingPayout, setSavingPayout] = useState(false);
 
   useEffect(() => {
-    if (profile) {
-      fetchDeals();
-    } else {
-      setLoading(false);
-    }
-  }, [profile]);
+    let cancelled = false;
 
-  async function fetchDeals() {
-    try {
+    const loadDeals = () => {
       let query = supabase.from('deals').select('*, buyer_profile:profiles!buyer_id(full_name), seller_profile:profiles!seller_id(full_name)');
       if (profile.role !== 'admin') {
         query = query.or(`buyer_id.eq.${profile.id},seller_id.eq.${profile.id}`);
       }
-      const { data, error } = await query.order('created_at', { ascending: false });
-      if (error) throw error;
-      setDeals(data || []);
-      const total = data?.length || 0;
-      const active = data?.filter(d => d.status === DEAL_STATUS.IN_ESCROW).length || 0;
-      const completed = data?.filter(d => d.status === DEAL_STATUS.COMPLETED).length || 0;
-      const disputed = data?.filter(d => d.status === DEAL_STATUS.DISPUTED).length || 0;
-      const totalValue = data?.reduce((sum, d) => sum + parseFloat(d.amount || 0), 0) || 0;
-      setStats({ total, active, completed, disputed, totalValue });
-    } catch (err) { console.error(err); }
-    finally { setLoading(false); }
-  }
+      return query.order('created_at', { ascending: false }).then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) throw error;
+        setDeals(data || []);
+        setStats({
+          total: data?.length || 0,
+          active: data?.filter(d => d.status === DEAL_STATUS.IN_ESCROW).length || 0,
+          completed: data?.filter(d => d.status === DEAL_STATUS.COMPLETED).length || 0,
+          disputed: data?.filter(d => d.status === DEAL_STATUS.DISPUTED).length || 0,
+          totalValue: data?.reduce((sum, d) => sum + parseFloat(d.amount || 0), 0) || 0,
+        });
+      });
+    };
+
+    const finish = () => { if (!cancelled) setLoading(false); };
+
+    if (profile) {
+      loadDeals().catch(err => console.error(err)).then(finish);
+    } else {
+      Promise.resolve().then(finish);
+    }
+
+    return () => { cancelled = true; };
+  }, [profile]);
 
   async function handleSavePayout() {
     const p = phone.trim();
@@ -63,6 +69,27 @@ export default function Dashboard() {
   }
 
   if (loading) return <div className="loading-screen"><div className="spinner"></div><p>Loading dashboard...</p></div>;
+
+  if (!profile) {
+    return (
+      <div className="page-wrapper dashboard-wrapper">
+        <div className="dashboard-hero-bg"></div>
+        <div className="container">
+          <div className="empty-state glass-card" style={{ marginTop: 60 }}>
+            <div className="empty-state-icon">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            </div>
+            <h3>Couldn't load your profile</h3>
+            <p>We couldn't load your account details. Please retry or refresh the page.</p>
+            <div className="empty-state-actions" style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 16 }}>
+              <button className="btn btn-primary" onClick={() => refreshProfile()}>Retry</button>
+              <button className="btn btn-ghost" onClick={() => window.location.reload()}>Refresh Page</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="page-wrapper dashboard-wrapper">

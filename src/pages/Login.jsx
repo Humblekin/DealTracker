@@ -1,19 +1,26 @@
 import { useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { Link, useNavigate, useSearchParams, Navigate } from 'react-router-dom';
+import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import './Auth.css';
 
 export default function Login() {
-  const { signIn } = useAuth();
+  const { signIn, user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
+
+  if (user) {
+    const redirect = searchParams.get('redirect');
+    return <Navigate to={redirect || (isAdmin ? '/admin' : '/dashboard')} replace />;
+  }
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -23,14 +30,44 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     try {
-      await signIn({ email: formData.email, password: formData.password });
+      const result = await signIn({ email: formData.email, password: formData.password });
+
+      // Honor the share-link redirect first — role resolution is only needed otherwise.
       const redirect = searchParams.get('redirect');
       if (redirect) {
         navigate(redirect);
-      } else {
-        const { data: profile } = await supabase.from('profiles').select('role').eq('id', (await supabase.auth.getUser()).data.user.id).single();
-        navigate(profile?.role === 'admin' ? '/admin' : '/dashboard');
+        return;
       }
+
+      // Resolve the signed-in user through several fallbacks so a transient
+      // session race never dead-ends the user with an error. Use the session
+      // returned by signIn instead of supabase.auth.getUser() — an extra /user
+      // round-trip right after login can trigger a redundant token refresh that
+      // races other open tabs into GoTrue's rate limit and rotates the token.
+      const authUser = result?.session?.user || result?.user || (await supabase.auth.getSession()).data?.session?.user;
+
+      let profile;
+      if (authUser) {
+        const { data } = await supabase.from('profiles').select('role').eq('id', authUser.id).limit(1).maybeSingle();
+        profile = data;
+      }
+
+      if (profile) {
+        if (profile.role === 'admin') {
+          import('./AdminDashboard');
+          navigate('/admin');
+        } else {
+          import('./Transactions');
+          import('./CreateDeal');
+          navigate('/dashboard');
+        }
+        return;
+      }
+
+      // Profile not visible yet — never force a full reload here. AuthContext's
+      // fetchProfile will create/fix the profile row, and ProtectedRoute handles
+      // redirects, so navigating to /dashboard is safe and loop-free.
+      navigate('/dashboard');
     } catch (err) {
       toast.error(err.message || 'Invalid credentials');
     } finally {
@@ -42,7 +79,10 @@ export default function Login() {
     <div className="auth-page">
       <div className="auth-bg-effects">
         <div className="auth-grid"></div>
+        <div className="auth-glow-ring"></div>
         <div className="auth-orb orb-primary"></div>
+        <div className="auth-orb orb-secondary"></div>
+        <div className="auth-orb orb-tertiary"></div>
       </div>
       <div className="auth-container">
         <div className="auth-card glass-card">
@@ -58,7 +98,7 @@ export default function Login() {
                   </linearGradient>
                 </defs>
               </svg>
-              <span>Secure<span className="brand-accent">Trade</span></span>
+              <span>Deal<span className="brand-accent">Guider</span></span>
             </Link>
             <h1>Welcome Back</h1>
             <p>Access your secure dashboard</p>
@@ -67,33 +107,49 @@ export default function Login() {
           <form onSubmit={handleSubmit} className="auth-form">
             <div className="form-group">
               <label className="form-label" htmlFor="login-email">Email Address</label>
-              <input
-                id="login-email"
-                type="email"
-                name="email"
-                className="form-input"
-                placeholder="name@company.com"
-                value={formData.email}
-                onChange={handleChange}
-                required
-              />
+              <div className="auth-input-wrap">
+                <Mail size={18} aria-hidden="true" />
+                <input
+                  id="login-email"
+                  type="email"
+                  name="email"
+                  className="form-input"
+                  placeholder="name@company.com"
+                  autoComplete="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
             </div>
 
             <div className="form-group">
               <label className="form-label" htmlFor="login-password">Password</label>
-              <input
-                id="login-password"
-                type="password"
-                name="password"
-                className="form-input"
-                placeholder="••••••••"
-                value={formData.password}
-                onChange={handleChange}
-                required
-              />
+              <div className="auth-input-wrap">
+                <Lock size={18} aria-hidden="true" />
+                <input
+                  id="login-password"
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  className="form-input"
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                />
+                <button
+                  type="button"
+                  className="auth-eye"
+                  onClick={() => setShowPassword((s) => !s)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
 
-            <button type="submit" className="btn btn-primary btn-full btn-lg" disabled={loading}>
+            <button type="submit" className="btn btn-primary btn-auth btn-full btn-lg" disabled={loading}>
               {loading ? (
                 <>
                   <span className="spinner spinner-sm"></span>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import StatusBadge from '../components/StatusBadge';
 import { formatGHS } from '../utils/fees';
@@ -39,7 +39,7 @@ export default function SharedDeal() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/join-deal`,
+        EDGE_FUNCTION_URL,
         {
           method: 'POST',
           headers: {

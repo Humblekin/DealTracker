@@ -36,7 +36,7 @@ serve(async (req) => {
     // Find transaction
     let query = supabase
       .from('merchant_transactions')
-      .select('*, deal:deals!deal_id(id, status, amount, moolre_reference, payment_reference)')
+      .select('*, deal:deals!deal_id(id, status, amount, paystack_reference, payment_reference)')
       .eq('merchant_id', auth.merchantId)
 
     if (transaction_id) {
@@ -61,13 +61,6 @@ serve(async (req) => {
       return new Response(JSON.stringify({
         error: 'Associated deal is not in escrow status',
       }), { status: 400, headers: cors })
-    }
-
-    // Prevent double shipment
-    if (transaction.status === 'SHIPPED' || transaction.deal.status === 'DELIVERED') {
-      return new Response(JSON.stringify({
-        error: 'Shipment has already been confirmed for this transaction',
-      }), { status: 409, headers: cors })
     }
 
     const now = new Date().toISOString()

@@ -26,10 +26,30 @@ export const STATUS_CONFIG = {
   CANCELLED: { label: 'Cancelled', color: '#dc2626', bg: 'rgba(220,38,38,0.15)' },
 };
 
-// Moolre sandbox public key — reused from existing sandbox integration.
-// Set via VITE_MOOLRE_PUBLIC_KEY in .env. Same key is used server-side
-// by edge functions for payment initiation and webhook verification.
-export const MOOLRE_PUBLIC_KEY = import.meta.env.VITE_MOOLRE_PUBLIC_KEY || '';
+// Paystack public key — used by the Paystack Inline checkout popup.
+// Set via VITE_PAYSTACK_PUBLIC_KEY in .env. The secret key is
+// server-side only (edge function secrets) and never exposed.
+export const PAYSTACK_PUBLIC_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || '';
+
+export const PAYMENT_STATUS = {
+  INITIALIZED: 'INITIALIZED',
+  PENDING: 'PENDING',
+  PROCESSING: 'PROCESSING',
+  SUCCESS: 'SUCCESS',
+  FAILED: 'FAILED',
+  ABANDONED: 'ABANDONED',
+  REVERSED: 'REVERSED',
+};
+
+export const PAYMENT_STATUS_CONFIG = {
+  INITIALIZED: { label: 'Initialized', color: '#6366f1', bg: 'rgba(99,102,241,0.15)' },
+  PENDING: { label: 'Pending', color: '#f59e0b', bg: 'rgba(245,158,11,0.15)' },
+  PROCESSING: { label: 'Processing', color: '#06b6d4', bg: 'rgba(6,182,212,0.15)' },
+  SUCCESS: { label: 'Successful', color: '#10b981', bg: 'rgba(16,185,129,0.15)' },
+  FAILED: { label: 'Failed', color: '#ef4444', bg: 'rgba(239,68,68,0.15)' },
+  ABANDONED: { label: 'Abandoned', color: '#f97316', bg: 'rgba(249,115,22,0.15)' },
+  REVERSED: { label: 'Reversed', color: '#6b7280', bg: 'rgba(107,114,128,0.15)' },
+};
 
 export const CURRENCY = 'GHS';
 export const CURRENCY_SYMBOL = 'GH₵';

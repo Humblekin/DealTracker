@@ -40,13 +40,6 @@ serve(async (req) => {
       }), { status: 400, headers: cors })
     }
 
-    if (transactionId === 'transaction' && merchantOrderId) {
-      // Path was /api/merchant/transaction/transaction?merchant_order_id=... 
-      // This means the segment after /transaction/ is missing, use query param
-    } else if (transactionId && transactionId !== 'transaction') {
-      // Use the path segment as transaction_id
-    }
-
     // Find transaction
     let query = supabase
       .from('merchant_transactions')
@@ -64,7 +57,7 @@ serve(async (req) => {
         status,
         idempotency_key,
         metadata,
-        moolre_payment_url,
+        payment_url,
         shipped_at,
         delivered_at,
         created_at,
@@ -75,7 +68,8 @@ serve(async (req) => {
           amount,
           status,
           payment_reference,
-          moolre_reference,
+          paystack_reference,
+          payment_status,
           platform_fee,
           net_amount,
           fee_breakdown,
@@ -123,14 +117,15 @@ serve(async (req) => {
         currency: transaction.currency,
         platform_fee: parseFloat(transaction.platform_fee),
         status: transaction.status,
-        payment_url: transaction.moolre_payment_url,
+        payment_url: transaction.payment_url,
         deal: transaction.deal ? {
           id: transaction.deal.id,
           title: transaction.deal.title,
           amount: parseFloat(transaction.deal.amount),
           status: transaction.deal.status,
           payment_reference: transaction.deal.payment_reference,
-          moolre_reference: transaction.deal.moolre_reference,
+          paystack_reference: transaction.deal.paystack_reference,
+          payment_status: transaction.deal.payment_status,
           platform_fee: transaction.deal.platform_fee ? parseFloat(transaction.deal.platform_fee) : null,
           net_amount: transaction.deal.net_amount ? parseFloat(transaction.deal.net_amount) : null,
           fee_breakdown: transaction.deal.fee_breakdown,
