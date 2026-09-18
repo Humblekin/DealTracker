@@ -232,8 +232,8 @@ serve(async (req) => {
     await supabase.from('notifications').insert([
       {
         user_id: deal.seller_id,
-        title: 'Payment Received!',
-        message: `Funds for "${deal.title}" have been sent to your mobile money.`,
+        title: 'Payout Initiated',
+        message: `Your payout for "${deal.title}" has been initiated and is being processed by Paystack.`,
         type: 'payment',
         deal_id,
       },

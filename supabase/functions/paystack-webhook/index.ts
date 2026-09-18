@@ -59,6 +59,84 @@ serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     })
 
+    // ---- Transfer events (payouts) — record status, no escrow state change
+    if (event.startsWith('transfer.')) {
+      // Payout references are stored in the FUNDS_TRANSFERRED audit log,
+      // not in the incoming-payment reference columns on deals.
+      const { data: payoutLog } = await supabase
+        .from('audit_logs')
+        .select('id, deal_id, details')
+        .eq('action', 'FUNDS_TRANSFERRED')
+        .eq('details->>reference', reference)
+        .maybeSingle()
+
+      if (!payoutLog?.deal_id) {
+        return ok({ received: true, processed: false, reason: 'No payout found for this reference' })
+      }
+
+      const { data: deal } = await supabase
+        .from('deals')
+        .select('id, seller_id, buyer_id, title')
+        .eq('id', payoutLog.deal_id)
+        .single()
+
+      if (!deal) {
+        return ok({ received: true, processed: false, reason: 'Payout deal not found' })
+      }
+
+      const providerAction = event === 'transfer.success'
+        ? 'PAYOUT_CONFIRMED_BY_PROVIDER'
+        : 'PAYOUT_REJECTED_BY_PROVIDER'
+
+      const { data: existingConfirmation } = await supabase
+        .from('audit_logs')
+        .select('id')
+        .eq('deal_id', deal.id)
+        .eq('action', providerAction)
+        .eq('details->>reference', reference)
+        .maybeSingle()
+
+      if (existingConfirmation) {
+        return ok({ received: true, processed: true, duplicate: true })
+      }
+
+      await supabase.from('audit_logs').insert({
+        deal_id: deal.id,
+        action: providerAction,
+        actor_id: null,
+        details: { reference, event },
+      })
+
+      if (event === 'transfer.success') {
+        await supabase.from('notifications').insert({
+          user_id: deal.seller_id,
+          title: 'Payment Received',
+          message: `Your payout for "${deal.title}" has arrived in your mobile money account.`,
+          type: 'payment',
+          deal_id: deal.id,
+        })
+      } else {
+        await supabase.from('notifications').insert([
+          {
+            user_id: deal.seller_id,
+            title: 'Payout Failed',
+            message: `Your payout for "${deal.title}" could not be completed. Please contact support.`,
+            type: 'payment',
+            deal_id: deal.id,
+          },
+          {
+            user_id: deal.buyer_id,
+            title: 'Payout Failed',
+            message: `The payout for "${deal.title}" could not be completed. An administrator will review it.`,
+            type: 'payment',
+            deal_id: deal.id,
+          },
+        ])
+      }
+
+      return ok({ received: true, processed: true })
+    }
+
     // Find deal by either our reference or the Paystack reference
     const { data: deals } = await supabase
       .from('deals')
@@ -70,17 +148,6 @@ serve(async (req) => {
     }
 
     const deal = deals[0]
-
-    // ---- Transfer events (payouts) — record status, no escrow state change
-    if (event.startsWith('transfer.')) {
-      await supabase.from('audit_logs').insert({
-        deal_id: deal.id,
-        action: event === 'transfer.success' ? 'PAYOUT_CONFIRMED_BY_PROVIDER' : 'PAYOUT_REJECTED_BY_PROVIDER',
-        actor_id: null,
-        details: { reference, event },
-      })
-      return ok({ received: true, processed: true })
-    }
 
     // ---- Non-success charge events — update payment status only
     if (event !== 'charge.success') {
