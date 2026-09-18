@@ -15,7 +15,7 @@ export function corsHeaders(origin: string | null): Record<string, string> {
     // X-Client-Info is sent by the supabase-js browser client on every
     // request; without it the browser preflight fails and invocations
     // throw "Failed to send a request to the Edge Function".
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Api-Key, X-Idempotency-Key, X-Client-Info',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, apikey, X-Api-Key, X-Idempotency-Key, X-Client-Info',
     'Access-Control-Max-Age': '86400',
     'Content-Type': 'application/json',
   }
