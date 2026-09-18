@@ -46,7 +46,7 @@ serve(async (req) => {
 
     const { data: deal, error: dealError } = await supabase
       .from('deals')
-      .select('id, status, buyer_id, seller_id, title, amount, payment_reference, paystack_reference')
+      .select('id, status, payment_status, buyer_id, seller_id, title, amount, payment_reference, paystack_reference')
       .eq('id', deal_id)
       .single()
 
@@ -64,12 +64,14 @@ serve(async (req) => {
         success: true,
         status: deal.status,
         payment_status: deal.payment_status,
+        payment_confirmed: ['IN_ESCROW', 'DELIVERED', 'COMPLETED'].includes(deal.status),
         message: 'Deal is not awaiting payment.',
       }), { status: 200, headers: cors })
     }
 
-    const reference = deal.paystack_reference || deal.payment_reference
-    if (!reference) {
+    const references = [deal.paystack_reference, deal.payment_reference]
+      .filter((value, index, all): value is string => Boolean(value) && all.indexOf(value) === index)
+    if (references.length === 0) {
       return new Response(JSON.stringify({
         success: true,
         status: deal.status,
@@ -78,7 +80,22 @@ serve(async (req) => {
       }), { status: 200, headers: cors })
     }
 
-    const verification = await verifyPayment(reference)
+    let reference = references[0]
+    let verification = await verifyPayment(reference)
+
+    // The provider can return a transient status immediately after checkout.
+    // Give the transaction a short settling window before reporting it as pending.
+    for (let attempt = 1; !verification.success && attempt < 3; attempt += 1) {
+      if (verification.status && !['pending', 'ongoing', 'processing'].includes(verification.status)) break
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+      verification = await verifyPayment(reference)
+    }
+
+    // Older deals may have different values in the two reference columns.
+    if (!verification.success && references.length > 1 && verification.status !== 'success') {
+      reference = references[1]
+      verification = await verifyPayment(reference)
+    }
 
     if (!verification.success) {
       // Record the provider status on the deal without changing escrow state

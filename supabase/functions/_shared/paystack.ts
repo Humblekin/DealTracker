@@ -131,9 +131,11 @@ export async function verifyPayment(reference: string): Promise<VerifyPaymentRes
     }
   }
 
+  const status = data.data.status?.trim().toLowerCase()
+
   return {
-    success: data.data.status === 'success',
-    status: data.data.status,
+    success: status === 'success',
+    status,
     amount: data.data.amount,
     reference: data.data.reference,
     gateway_response: data.data.gateway_response,
