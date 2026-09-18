@@ -1,19 +1,21 @@
 import { Link } from 'react-router-dom';
 import StatusBadge from './StatusBadge';
 import PaymentStatusBadge from './PaymentStatusBadge';
+import { getCounterpartyRoleLabel } from '../utils/constants';
 import { formatGHS } from '../utils/fees';
 import './DealCard.css';
 
 export default function DealCard({ deal, userId }) {
   const isBuyerForDeal = deal.buyer_id === userId;
   const isSellerForDeal = deal.seller_id === userId;
+  const expectedCounterpartyRole = getCounterpartyRoleLabel(deal.creator_role);
 
   const otherParty = deal.buyer_id && deal.seller_id
     ? (isBuyerForDeal
         ? deal.seller_profile?.full_name || 'Seller'
         : deal.buyer_profile?.full_name || 'Buyer')
     : deal.creator_role
-        ? `Awaiting ${deal.creator_role === 'BUYER' ? 'Seller' : 'Buyer'}...`
+        ? `Awaiting ${expectedCounterpartyRole.toLowerCase()}...`
         : 'Awaiting counterparty...';
 
   const otherLabel = isBuyerForDeal ? 'Seller' : (isSellerForDeal ? 'Buyer' : 'Counterparty');

@@ -38,6 +38,9 @@ supabase functions deploy paystack-verify
 supabase functions deploy confirm-delivery
 supabase functions deploy paystack-payout
 
+# Admin functions
+supabase functions deploy admin-delete-user
+
 # Merchant integration functions
 supabase functions deploy merchant-register
 supabase functions deploy merchant-apply

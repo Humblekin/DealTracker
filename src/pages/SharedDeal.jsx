@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import StatusBadge from '../components/StatusBadge';
 import { formatGHS } from '../utils/fees';
-import { DEAL_STATUS } from '../utils/constants';
+import { DEAL_STATUS, getCounterpartyRoleLabel } from '../utils/constants';
 import { Check, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import './DealDetails.css';
@@ -51,7 +51,7 @@ export default function SharedDeal() {
       );
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || 'Failed to join deal');
-      toast.success(`You joined as ${deal.creator_role === 'BUYER' ? 'seller' : 'buyer'}!`);
+      toast.success(`You joined as ${getCounterpartyRoleLabel(deal.creator_role).toLowerCase()}!`);
       navigate(`/deals/${body.deal_id}`);
     } catch (err) {
       if (err instanceof TypeError && err.message === 'Failed to fetch') {
@@ -83,7 +83,7 @@ export default function SharedDeal() {
   const isCounterparty = deal.creator_role === 'BUYER'
     ? profile?.id === deal.seller_id
     : profile?.id === deal.buyer_id;
-  const joinRole = deal.creator_role === 'BUYER' ? 'Seller' : 'Buyer';
+  const joinRole = getCounterpartyRoleLabel(deal.creator_role);
 
   return (
     <div className="page-wrapper shared-deal-page">
@@ -137,7 +137,7 @@ export default function SharedDeal() {
             {isCounterparty && (
               <div className="joined-message">
                 <span className="joined-icon"><Check size={16} /></span>
-                You already joined this deal as {deal.creator_role === 'BUYER' ? 'seller' : 'buyer'}
+                You already joined this deal as {joinRole.toLowerCase()}
               </div>
             )}
 

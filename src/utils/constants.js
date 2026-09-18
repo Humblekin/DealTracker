@@ -9,6 +9,15 @@ export const DEAL_STATUS = {
   CANCELLED: 'CANCELLED',
 };
 
+export function getCounterpartyRole(creatorRole) {
+  return creatorRole === 'BUYER' ? 'SELLER' : 'BUYER';
+}
+
+export function getCounterpartyRoleLabel(creatorRole) {
+  const role = getCounterpartyRole(creatorRole);
+  return role === 'SELLER' ? 'Seller' : 'Buyer';
+}
+
 export const ROLES = {
   BUYER: 'buyer',
   SELLER: 'seller',

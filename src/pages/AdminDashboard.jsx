@@ -45,7 +45,7 @@ export default function AdminDashboard() {
     setLoading(true);
     try {
       const [dealsRes, disputesRes, usersRes, merchantsRes] = await Promise.all([
-        supabase.from('deals').select('*, buyer_profile:profiles!buyer_id(full_name, email), seller_profile:profiles!seller_id(full_name, email, phone, network)').order('created_at', { ascending: false }),
+        supabase.from('deals').select('*').order('created_at', { ascending: false }),
         supabase.from('disputes').select('*, deal:deals(title)').order('created_at', { ascending: false }),
         supabase.from('profiles').select('*').order('created_at', { ascending: false }),
         supabase.from('merchants').select('*, api_keys:merchant_api_keys(key_prefix, created_at), transactions:merchant_transactions(id)').order('created_at', { ascending: false }),
@@ -55,8 +55,14 @@ export default function AdminDashboard() {
       if (disputesRes.error) throw disputesRes.error;
       if (usersRes.error) throw usersRes.error;
       if (merchantsRes.error) { console.error('Merchants query error:', merchantsRes.error); throw merchantsRes.error; }
-      console.log('Merchants query result:', JSON.parse(JSON.stringify(merchantsRes.data)));
-      const d = dealsRes.data || [];
+
+      const profileMap = new Map((usersRes.data || []).map(user => [user.id, user]));
+      const d = (dealsRes.data || []).map(deal => ({
+        ...deal,
+        buyer_profile: deal.buyer_id ? profileMap.get(deal.buyer_id) || null : null,
+        seller_profile: deal.seller_id ? profileMap.get(deal.seller_id) || null : null,
+      }));
+
       setDeals(d);
       setDisputes(disputesRes.data || []);
       setUsers(usersRes.data || []);
@@ -223,12 +229,14 @@ export default function AdminDashboard() {
     if (!deletingTarget) return;
     setActionLoading(`del_${deletingTarget.id}`);
     try {
-      const { error } = await supabase.from('profiles').delete().eq('id', deletingTarget.id);
+      const { error } = await supabase.functions.invoke('admin-delete-user', {
+        body: { user_id: deletingTarget.id },
+      });
       if (error) throw error;
       toast.success('User deleted.');
       setDeletingTarget(null);
       loadAll();
-    } catch (err) { console.error(err); toast.error('Failed to delete user.'); }
+    } catch (err) { console.error(err); toast.error(err.message || 'Failed to delete user.'); }
     finally { setActionLoading(null); }
   }
 

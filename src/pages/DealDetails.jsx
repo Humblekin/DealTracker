@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase';
 import StatusBadge from '../components/StatusBadge';
 import FeeBreakdown from '../components/FeeBreakdown';
 import { formatGHS } from '../utils/fees';
-import { DEAL_STATUS, PAYMENT_STATUS } from '../utils/constants';
+import { DEAL_STATUS, PAYMENT_STATUS, getCounterpartyRoleLabel } from '../utils/constants';
 import { usePaystackPayment } from '../hooks/usePaystackPayment';
 import { Info, Link, CreditCard, CheckCircle, Package, AlertTriangle, X, Clock, PartyPopper } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -165,7 +165,8 @@ export default function DealDetails() {
   const isSeller = profile?.id === deal.seller_id;
   const isCreator = deal.creator_role === 'BUYER' ? isBuyer : isSeller;
   const canShare = isCreator && deal.status === DEAL_STATUS.AWAITING_COUNTERPARTY;
-  const joinRole = deal.creator_role === 'BUYER' ? 'Seller' : 'Buyer';
+  const counterpartyRole = getCounterpartyRoleLabel(deal.creator_role);
+  const joinRole = counterpartyRole;
 
   return (
     <div className="page-wrapper deal-details-page">
@@ -203,7 +204,7 @@ export default function DealDetails() {
                   <span className="party-name">
                     {deal.buyer_profile?.full_name || (
                       <span className="text-muted">
-                        {deal.creator_role === 'BUYER' ? 'You (Creator)' : `Awaiting ${joinRole.toLowerCase()}...`}
+                        {deal.creator_role === 'BUYER' ? 'You (Creator)' : `Awaiting ${counterpartyRole.toLowerCase()}...`}
                       </span>
                     )}
                   </span>
@@ -213,7 +214,7 @@ export default function DealDetails() {
                   <span className="party-name">
                     {deal.seller_profile?.full_name || (
                       <span className="text-muted">
-                        {deal.creator_role === 'SELLER' ? 'You (Creator)' : 'Awaiting seller...'}
+                        {deal.creator_role === 'SELLER' ? 'You (Creator)' : `Awaiting ${counterpartyRole.toLowerCase()}...`}
                       </span>
                     )}
                   </span>
