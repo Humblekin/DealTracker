@@ -13,6 +13,18 @@ import { deliverWebhook } from '../_shared/webhook.ts'
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
+function toDealPaymentStatus(providerStatus?: string): string {
+  switch (providerStatus) {
+    case 'success': return 'SUCCESS'
+    case 'failed': return 'FAILED'
+    case 'abandoned': return 'ABANDONED'
+    case 'reversed': return 'REVERSED'
+    case 'processing':
+    case 'ongoing': return 'PROCESSING'
+    default: return 'PENDING'
+  }
+}
+
 serve(async (req) => {
   const origin = req.headers.get('Origin')
   const cors = corsHeaders(origin)
@@ -83,11 +95,11 @@ serve(async (req) => {
     let reference = references[0]
     let verification = await verifyPayment(reference)
 
-    // The provider can return a transient status immediately after checkout.
-    // Give the transaction a short settling window before reporting it as pending.
-    for (let attempt = 1; !verification.success && attempt < 3; attempt += 1) {
+    // Mobile-money transactions can take several seconds to settle after checkout.
+    // Poll briefly before reporting the provider status as pending.
+    for (let attempt = 1; !verification.success && attempt < 6; attempt += 1) {
       if (verification.status && !['pending', 'ongoing', 'processing'].includes(verification.status)) break
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      await new Promise((resolve) => setTimeout(resolve, 2000))
       verification = await verifyPayment(reference)
     }
 
@@ -99,7 +111,15 @@ serve(async (req) => {
 
     if (!verification.success) {
       // Record the provider status on the deal without changing escrow state
-      await supabase.from('deals').update({ payment_status: verification.status || 'PENDING' }).eq('id', deal.id)
+      const paymentStatus = toDealPaymentStatus(verification.status)
+      const { error: statusUpdateError } = await supabase
+        .from('deals')
+        .update({ payment_status: paymentStatus })
+        .eq('id', deal.id)
+
+      if (statusUpdateError) {
+        console.error('Failed to persist payment status:', statusUpdateError)
+      }
 
       await supabase.from('audit_logs').insert({
         deal_id: deal.id,
@@ -111,9 +131,11 @@ serve(async (req) => {
       return new Response(JSON.stringify({
         success: true,
         status: deal.status,
-        payment_status: verification.status || 'PENDING',
+        payment_status: paymentStatus,
         payment_confirmed: false,
-        message: verification.error || 'Payment has not been completed yet.',
+        provider_status: verification.status || null,
+        gateway_response: verification.gateway_response || null,
+        message: verification.error || `Payment is ${verification.status || 'not completed'} at Paystack.`,
       }), { status: 200, headers: cors })
     }
 

@@ -8,7 +8,7 @@ function loadPaystackScript() {
   if (!paystackScriptPromise) {
     paystackScriptPromise = new Promise((resolve, reject) => {
       const script = document.createElement('script');
-      script.src = 'https://js.paystack.co/v1/inline.js';
+          script.src = 'https://js.paystack.co/v2/inline.js';
       script.async = true;
       script.onload = () => resolve(window.PaystackPop);
       script.onerror = () => reject(new Error('Failed to load Paystack. Please check your connection.'));

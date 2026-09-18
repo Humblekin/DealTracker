@@ -167,6 +167,8 @@ export default function DealDetails() {
   const canShare = isCreator && deal.status === DEAL_STATUS.AWAITING_COUNTERPARTY;
   const counterpartyRole = getCounterpartyRoleLabel(deal.creator_role);
   const joinRole = counterpartyRole;
+  const canRetryPayment = !deal.payment_reference
+    || [PAYMENT_STATUS.ABANDONED, PAYMENT_STATUS.FAILED, PAYMENT_STATUS.REVERSED].includes(deal.payment_status);
 
   return (
     <div className="page-wrapper deal-details-page">
@@ -281,7 +283,7 @@ export default function DealDetails() {
                 </div>
               )}
 
-              {deal.status === DEAL_STATUS.AWAITING_PAYMENT && isBuyer && !deal.payment_reference && (
+              {deal.status === DEAL_STATUS.AWAITING_PAYMENT && isBuyer && canRetryPayment && (
                 <div className="action-wrapper">
                   <p className="action-hint">Fund the escrow to secure this transaction. Pay securely with Paystack (card or mobile money).</p>
                   <button className="btn btn-primary btn-full btn-lg action-btn" onClick={handlePayment} disabled={actionLoading || paying}>
@@ -293,7 +295,7 @@ export default function DealDetails() {
                 </div>
               )}
 
-              {deal.status === DEAL_STATUS.AWAITING_PAYMENT && isBuyer && deal.payment_reference && (
+              {deal.status === DEAL_STATUS.AWAITING_PAYMENT && isBuyer && deal.payment_reference && !canRetryPayment && (
                 <div className="action-wrapper">
                   <div className="status-notice notice-warning" style={{marginBottom: '12px'}}>
                   <div className="notice-icon"><Clock size={20} /></div>

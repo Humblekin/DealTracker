@@ -9,21 +9,15 @@ export function usePaystackPayment() {
 
   // Initialize a checkout session and open the Paystack Inline popup.
   // onPaid is invoked after Paystack confirms success on the client.
-  const startPayment = useCallback(async ({ deal, onPaid, onAbandoned }) => {
+  const startPayment = useCallback(async ({ deal }) => {
     setPaying(true);
     try {
       const session = await initializePayment({
         dealId: deal.id,
-        redirectUrl: `${window.location.origin}/deals/${deal.id}`,
       });
 
       await openPaystackCheckout({
         accessCode: session.access_code,
-        reference: session.reference,
-        email: deal.buyer_profile?.email,
-        amount: parseFloat(deal.amount),
-        onSuccess: () => onPaid?.(session.reference),
-        onClose: () => onAbandoned?.(),
       });
     } finally {
       setPaying(false);

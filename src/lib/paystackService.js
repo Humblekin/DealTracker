@@ -40,23 +40,13 @@ export async function verifyDealPayment(dealId) {
 }
 
 // Step 3 — open the Paystack Inline popup for the initialized session
-export async function openPaystackCheckout({ accessCode, reference, email, amount, onSuccess, onClose }) {
+export async function openPaystackCheckout({ accessCode }) {
   if (!PAYSTACK_PUBLIC_KEY) {
     throw new Error('Paystack public key is not configured. Set VITE_PAYSTACK_PUBLIC_KEY in your .env file.');
   }
 
   const PaystackPop = await getPaystackPop();
 
-  const popup = PaystackPop.setup({
-    key: PAYSTACK_PUBLIC_KEY,
-    email,
-    amount: Math.round(amount * 100), // pesewas
-    reference,
-    currency: 'GHS',
-    ...(accessCode ? { accessCode } : {}),
-    onSuccess,
-    onClose,
-  });
-
-  popup.openIframe();
+  const popup = new PaystackPop();
+  popup.resumeTransaction(accessCode);
 }
