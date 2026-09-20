@@ -88,8 +88,10 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: paymentResult.error }), { status: 502, headers: cors })
     }
 
-    // Persist payment reference + status on the deal
-    const { error: updateError } = await supabase
+    // Persist payment reference + status on the deal.
+    // Conditional update so we never clobber a SUCCESS/escrow-funded state
+    // written by the webhook while this request was in flight.
+    const { data: updatedDeal, error: updateError } = await supabase
       .from('deals')
       .update({
         payment_reference: reference,
@@ -97,8 +99,18 @@ serve(async (req) => {
         payment_status: 'PENDING',
       })
       .eq('id', deal.id)
+      .eq('status', 'AWAITING_PAYMENT')
+      .neq('payment_status', 'SUCCESS')
+      .select('id')
+      .maybeSingle()
 
     if (updateError) throw updateError
+
+    if (!updatedDeal) {
+      return new Response(JSON.stringify({
+        error: 'Deal is no longer awaiting payment (already funded). Refresh the page.',
+      }), { status: 409, headers: cors })
+    }
 
     await supabase.from('audit_logs').insert({
       deal_id: deal.id,

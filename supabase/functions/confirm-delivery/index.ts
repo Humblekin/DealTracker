@@ -94,6 +94,10 @@ serve(async (req) => {
       details: { amount: deal.amount, payout_amount: payoutAmount },
     })
 
+    console.log(
+      `[confirm-delivery] deal ${deal_id}: IN_ESCROW → DELIVERED by buyer ${user.id}, payout_amount=${payoutAmount}`
+    )
+
     // Prevent double payout: check if funds were already transferred
     const { data: existingPayout } = await supabase
       .from('audit_logs')
@@ -176,6 +180,9 @@ serve(async (req) => {
     })
 
     if (!transfer.success) {
+      console.log(
+        `[confirm-delivery] deal ${deal_id}: payout initiate FAILED (ref ${payoutRef}): ${transfer.error}`
+      )
       await supabase.from('audit_logs').insert({
         deal_id,
         action: 'PAYOUT_FAILED',
@@ -216,6 +223,10 @@ serve(async (req) => {
     }
 
     await supabase.from('deals').update({ status: 'COMPLETED' }).eq('id', deal_id).eq('status', 'DELIVERED')
+
+    console.log(
+      `[confirm-delivery] deal ${deal_id}: payout initiated SUCCESS, DELIVERED → COMPLETED (ref ${transfer.reference || payoutRef}, transfer_code ${transfer.transfer_code})`
+    )
 
     await supabase.from('audit_logs').insert({
       deal_id,

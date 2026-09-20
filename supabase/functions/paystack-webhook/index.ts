@@ -88,6 +88,10 @@ serve(async (req) => {
         ? 'PAYOUT_CONFIRMED_BY_PROVIDER'
         : 'PAYOUT_REJECTED_BY_PROVIDER'
 
+      console.log(
+        `[webhook] payout ${event} received (ref ${reference}) for deal ${payoutLog.deal_id}`
+      )
+
       const { data: existingConfirmation } = await supabase
         .from('audit_logs')
         .select('id')
@@ -140,7 +144,7 @@ serve(async (req) => {
     // Find deal by either our reference or the Paystack reference
     const { data: deals } = await supabase
       .from('deals')
-      .select('id, status, buyer_id, seller_id, title, amount, payment_reference')
+      .select('id, status, buyer_id, seller_id, title, amount, payment_reference, paystack_reference, payment_status')
       .or(`payment_reference.eq.${reference},paystack_reference.eq.${reference}`)
 
     if (!deals || deals.length === 0) {
@@ -149,7 +153,14 @@ serve(async (req) => {
 
     const deal = deals[0]
 
-    // ---- Non-success charge events — update payment status only
+    // ---- Non-success charge events — update payment status only.
+    // IMPORTANT: Paystack can redeliver webhooks and deliver them out of
+    // order. A late `charge.failed` / `charge.pending` / `charge.abandoned` /
+    // `charge.reversed` for a charge that actually succeeded must NEVER
+    // downgrade a verified SUCCESS/escrow-funded deal. payment_status is
+    // only ever advanced to SUCCESS in the same transaction that moves the
+    // deal to IN_ESCROW, so we gate every non-success write on the deal
+    // still being in AWAITING_PAYMENT and payment_status not being SUCCESS.
     if (event !== 'charge.success') {
       const statusMap: Record<string, string> = {
         'charge.pending': 'PENDING',
@@ -158,8 +169,62 @@ serve(async (req) => {
         'charge.reversed': 'REVERSED',
       }
       const paymentStatus = statusMap[event]
+      if (!paymentStatus) {
+        return ok({ received: true, processed: false, reason: 'Unhandled charge event' })
+      }
 
-      await supabase.from('deals').update({ payment_status: paymentStatus }).eq('id', deal.id)
+      // Guard 1: deal already funded / advanced — never downgrade it.
+      if (deal.status !== 'AWAITING_PAYMENT' || deal.payment_status === 'SUCCESS') {
+        console.log(
+          `[webhook] Ignoring ${event} (${reference}) — deal ${deal.id} already at ${deal.status} / payment ${deal.payment_status}`
+        )
+        return ok({
+          received: true, processed: false, skipped: true,
+          reason: 'Deal already funded; ignoring non-success event',
+        })
+      }
+
+      // Guard 2: idempotency — ignore duplicate deliveries of the same event.
+      const auditAction = `PAYMENT_${paymentStatus}`
+      const { data: duplicateEvent } = await supabase
+        .from('audit_logs')
+        .select('id')
+        .eq('deal_id', deal.id)
+        .eq('action', auditAction)
+        .eq('details->>reference', reference)
+        .maybeSingle()
+
+      if (duplicateEvent) {
+        return ok({ received: true, processed: true, duplicate: true })
+      }
+
+      // Guard 3: atomic conditional update — only apply while the deal is
+      // still AWAITING_PAYMENT and payment_status is not already SUCCESS.
+      const { data: updatedDeal, error: updateError } = await supabase
+        .from('deals')
+        .update({ payment_status: paymentStatus })
+        .eq('id', deal.id)
+        .eq('status', 'AWAITING_PAYMENT')
+        .neq('payment_status', 'SUCCESS')
+        .select('id')
+        .maybeSingle()
+
+      if (updateError) throw updateError
+      if (!updatedDeal) {
+        // Lost a race with the success handler — the deal is now funded.
+        // Do not record a failure/pending state against it.
+        console.log(
+          `[webhook] Race: ${event} (${reference}) lost to a concurrent success — deal ${deal.id} left unchanged`
+        )
+        return ok({
+          received: true, processed: false, skipped: true,
+          reason: 'Deal advanced concurrently; ignoring stale event',
+        })
+      }
+
+      console.log(
+        `[webhook] deal ${deal.id}: payment_status ${deal.payment_status} → ${paymentStatus} (${event}, ref ${reference})`
+      )
 
       await supabase.from('payments').insert({
         deal_id: deal.id,
@@ -171,7 +236,7 @@ serve(async (req) => {
 
       await supabase.from('audit_logs').insert({
         deal_id: deal.id,
-        action: `PAYMENT_${paymentStatus}`,
+        action: auditAction,
         actor_id: deal.buyer_id,
         details: { reference, event },
       })
@@ -198,6 +263,10 @@ serve(async (req) => {
         reason: 'Deal was not in AWAITING_PAYMENT (concurrent update or already processed)',
       })
     }
+
+    console.log(
+      `[webhook] deal ${deal.id}: escrow funded AWAITING_PAYMENT → IN_ESCROW (charge.success, ref ${reference})`
+    )
 
     const paidAmount = data.amount ? fromPesewas(data.amount) : parseFloat(deal.amount)
 

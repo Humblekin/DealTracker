@@ -110,12 +110,17 @@ serve(async (req) => {
     }
 
     if (!verification.success) {
-      // Record the provider status on the deal without changing escrow state
+      // Record the provider status on the deal without changing escrow state.
+      // Never downgrade a verified SUCCESS/past-AWAITING_PAYMENT deal: the
+      // webhook may have advanced the deal (or set payment_status=SUCCESS)
+      // while this stale request was in flight.
       const paymentStatus = toDealPaymentStatus(verification.status)
       const { error: statusUpdateError } = await supabase
         .from('deals')
         .update({ payment_status: paymentStatus })
         .eq('id', deal.id)
+        .eq('status', 'AWAITING_PAYMENT')
+        .neq('payment_status', 'SUCCESS')
 
       if (statusUpdateError) {
         console.error('Failed to persist payment status:', statusUpdateError)
