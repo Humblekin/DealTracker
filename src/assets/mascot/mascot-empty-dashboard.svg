@@ -1,0 +1,127 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" width="100%" height="100%" fill="none">
+  <defs>
+    <radialGradient id="emp-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#00e5b8" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#00e5b8" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="emp-skin" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ba7d56"/>
+      <stop offset="100%" stop-color="#935733"/>
+    </linearGradient>
+    <linearGradient id="emp-skin-dark" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#935733"/>
+      <stop offset="100%" stop-color="#733d1f"/>
+    </linearGradient>
+    <linearGradient id="emp-hoodie" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00e5b8"/>
+      <stop offset="60%" stop-color="#00b4d8"/>
+      <stop offset="100%" stop-color="#0077b6"/>
+    </linearGradient>
+    <linearGradient id="emp-hoodie-dark" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0077b6"/>
+      <stop offset="100%" stop-color="#0d1b2a"/>
+    </linearGradient>
+    <linearGradient id="emp-pants" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <filter id="emp-shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="6" flood-color="#0d1b2a" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+
+  <ellipse cx="160" cy="296" rx="65" ry="10" fill="#0d1b2a" opacity="0.15"/>
+  <circle cx="160" cy="150" r="130" fill="url(#emp-glow)"/>
+
+  <!-- Welcome sparkles around waving hand -->
+  <path d="M235 60 L238 52 L241 60 L249 63 L241 66 L238 74 L235 66 L227 63 Z" fill="#ffd166" opacity="0.85"/>
+  <path d="M260 85 L262 78 L264 85 L271 87 L264 89 L262 96 L260 89 L253 87 Z" fill="#00e5b8" opacity="0.8"/>
+  <circle cx="218" cy="85" r="3" fill="#ff70a6"/>
+  <circle cx="75" cy="120" r="3.5" fill="#ffd166"/>
+
+  <g filter="url(#emp-shadow)">
+    <!-- Legs -->
+    <path d="M140 245 L138 285 L128 288 C123 290 123 295 131 296 L151 296 C156 296 158 292 156 288 L151 245 Z" fill="url(#emp-pants)" stroke="#0f172a" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M170 245 L172 285 L182 288 C187 290 187 295 179 296 L159 296 C154 296 152 292 154 288 L159 245 Z" fill="url(#emp-pants)" stroke="#0f172a" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M128 291 C128 291 136 287 151 291 L151 295 L129 295 Z" fill="#00e5b8"/>
+    <path d="M182 291 C182 291 174 287 159 291 L159 295 L181 295 Z" fill="#00e5b8"/>
+
+    <!-- Left Arm: Holding Smartphone displaying DealGuider shield -->
+    <path d="M120 170 L95 185 L108 205" stroke="url(#emp-hoodie)" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M120 170 L95 185 L108 205" stroke="#0077b6" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+
+    <!-- Smartphone -->
+    <g transform="translate(85, 185) rotate(-10)">
+      <rect x="0" y="0" width="30" height="50" rx="5" fill="#0f172a" stroke="#334155" stroke-width="2"/>
+      <rect x="2" y="4" width="26" height="42" rx="3" fill="#00e5b8" opacity="0.9"/>
+      <!-- Screen Shield Icon -->
+      <path d="M15 14 L21 16 L21 24 C21 28 15 31 15 31 C15 31 9 28 9 24 L9 16 Z" fill="#0d1b2a"/>
+      <path d="M15 16 L19 18 L19 23 C19 26 15 28 15 28 C15 28 11 26 11 23 L11 18 Z" fill="#ffd166"/>
+    </g>
+    <!-- Left Hand holding phone -->
+    <circle cx="112" cy="208" r="8.5" fill="url(#emp-skin)" stroke="#733d1f" stroke-width="2"/>
+
+    <!-- Torso -->
+    <path d="M120 165 C120 165 130 152 160 152 C190 152 200 165 200 165 L206 230 C206 242 196 248 185 248 L135 248 C124 248 114 242 114 230 Z" fill="url(#emp-hoodie)" stroke="#0f172a" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M132 216 L188 216 L182 242 L138 242 Z" fill="url(#emp-hoodie-dark)" opacity="0.35"/>
+    <path d="M154 175 L166 175 L166 185 C166 190 160 194 160 194 C160 194 154 190 154 185 Z" fill="#ffd166" stroke="#0d1b2a" stroke-width="1.5"/>
+    <path d="M156 177 L164 177 L164 184 C164 187 160 190 160 190 C160 190 156 187 156 184 Z" fill="#00e5b8"/>
+
+    <!-- Right Arm: Welcoming Friendly Wave High Up -->
+    <path d="M198 170 L228 150 L238 105" stroke="url(#emp-hoodie)" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M198 170 L228 150 L238 105" stroke="#0077b6" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <!-- Open Waving Hand -->
+    <g transform="translate(230, 92) rotate(15)">
+      <circle cx="10" cy="10" r="9" fill="url(#emp-skin)" stroke="#733d1f" stroke-width="2"/>
+      <!-- Fingers waving -->
+      <path d="M4 2 L4 -4 C4 -6 7 -6 7 -4 L7 2" fill="url(#emp-skin)" stroke="#733d1f" stroke-width="1.8" stroke-linejoin="round"/>
+      <path d="M9 1 L9 -6 C9 -8 12 -8 12 -6 L12 1" fill="url(#emp-skin)" stroke="#733d1f" stroke-width="1.8" stroke-linejoin="round"/>
+      <path d="M14 2 L14 -5 C14 -7 17 -7 17 -5 L17 2" fill="url(#emp-skin)" stroke="#733d1f" stroke-width="1.8" stroke-linejoin="round"/>
+      <path d="M18 6 L18 0 C18 -2 21 -2 21 0 L21 6" fill="url(#emp-skin)" stroke="#733d1f" stroke-width="1.8" stroke-linejoin="round"/>
+    </g>
+
+    <!-- Neck & Collar -->
+    <path d="M148 145 L172 145 L174 158 L146 158 Z" fill="url(#emp-skin-dark)"/>
+    <path d="M140 155 C145 168 175 168 180 155 C172 165 148 165 140 155 Z" fill="#0077b6" stroke="#0f172a" stroke-width="2"/>
+
+    <!-- Head -->
+    <path d="M130 92 C130 65 190 65 190 92 C192 118 185 146 160 146 C135 146 128 118 130 92 Z" fill="url(#emp-skin)" stroke="#733d1f" stroke-width="2.5"/>
+
+    <!-- Ears -->
+    <circle cx="127" cy="105" r="9" fill="url(#emp-skin)" stroke="#733d1f" stroke-width="2"/>
+    <circle cx="193" cy="105" r="9" fill="url(#emp-skin)" stroke="#733d1f" stroke-width="2"/>
+
+    <!-- Hair -->
+    <path d="M126 88 C124 64 135 48 160 48 C185 48 196 64 194 88 C192 72 188 62 160 62 C132 62 128 72 126 88 Z" fill="#1b120c"/>
+    <path d="M128 78 C126 50 140 40 160 40 C180 40 194 50 192 78 C185 54 175 48 160 48 C145 48 135 54 128 78 Z" fill="#1b120c"/>
+    <circle cx="140" cy="50" r="10" fill="#241710"/>
+    <circle cx="155" cy="45" r="11" fill="#2b1c14"/>
+    <circle cx="170" cy="47" r="10.5" fill="#241710"/>
+    <circle cx="182" cy="56" r="9" fill="#1b120c"/>
+    <circle cx="132" cy="58" r="9" fill="#1b120c"/>
+
+    <!-- Cheerful high Eyebrows -->
+    <path d="M137 91 C142 86 149 87 153 91" stroke="#1b120c" stroke-width="3.2" stroke-linecap="round" fill="none"/>
+    <path d="M167 91 C171 87 178 86 183 91" stroke="#1b120c" stroke-width="3.2" stroke-linecap="round" fill="none"/>
+
+    <!-- Big Happy Bright Eyes -->
+    <ellipse cx="144" cy="103" rx="7.5" ry="9" fill="#1b120c"/>
+    <circle cx="142" cy="100" r="3" fill="#ffffff"/>
+    <circle cx="146.5" cy="105" r="1.3" fill="#ffffff"/>
+    <ellipse cx="176" cy="103" rx="7.5" ry="9" fill="#1b120c"/>
+    <circle cx="174" cy="100" r="3" fill="#ffffff"/>
+    <circle cx="178.5" cy="105" r="1.3" fill="#ffffff"/>
+
+    <!-- Rosy Happy Cheeks -->
+    <ellipse cx="138" cy="116" rx="7" ry="4" fill="#d97757" opacity="0.4"/>
+    <ellipse cx="182" cy="116" rx="7" ry="4" fill="#d97757" opacity="0.4"/>
+
+    <!-- Nose -->
+    <path d="M157 110 C158 114 162 114 163 110" stroke="#733d1f" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+
+    <!-- Welcoming Warm Smile with White Teeth -->
+    <path d="M143 122 C147 136 173 136 177 122 Z" fill="#991b1b" stroke="#733d1f" stroke-width="2"/>
+    <path d="M146 123 C151 127 169 127 174 123 Z" fill="#ffffff"/>
+  </g>
+</svg>
+

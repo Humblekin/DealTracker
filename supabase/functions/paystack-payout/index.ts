@@ -82,7 +82,19 @@ serve(async (req) => {
       }), { status: 400, headers: cors })
     }
 
-    // Prevent double payout
+    // Prevent double payout: check both durable payout_status and audit_logs
+    if (deal.payout_status === 'SUCCESS' || deal.status === 'COMPLETED') {
+      return new Response(JSON.stringify({
+        error: 'A payout has already been completed for this deal (double payout prevented)',
+      }), { status: 409, headers: cors })
+    }
+
+    if (deal.payout_status === 'RESERVED' || deal.payout_status === 'PROCESSING') {
+      return new Response(JSON.stringify({
+        error: 'A payout is currently in progress for this deal',
+      }), { status: 409, headers: cors })
+    }
+
     const { data: existingPayout } = await supabase
       .from('audit_logs')
       .select('id')
@@ -97,6 +109,12 @@ serve(async (req) => {
     }
 
     const reference = `PO-${deal_id}-${Date.now()}`
+
+    // Persist payout reference and status as PROCESSING before initiating HTTP call
+    await supabase.from('deals').update({
+      payout_reference: reference,
+      payout_status: 'PROCESSING',
+    }).eq('id', deal_id)
 
     // Create recipient and initiate the transfer
     const recipient = await createTransferRecipient({
@@ -123,6 +141,7 @@ serve(async (req) => {
     })
 
     if (!transfer.success) {
+      await supabase.from('deals').update({ payout_status: 'FAILED' }).eq('id', deal_id)
       await supabase.from('audit_logs').insert({
         deal_id,
         action: 'ADMIN_PAYOUT_FAILED',
@@ -132,7 +151,11 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: transfer.error }), { status: 502, headers: cors })
     }
 
-    await supabase.from('deals').update({ status: 'COMPLETED' }).eq('id', deal_id)
+    const isDirectSuccess = transfer.status === 'success'
+    await supabase.from('deals').update({
+      status: isDirectSuccess ? 'COMPLETED' : deal.status,
+      payout_status: isDirectSuccess ? 'SUCCESS' : 'PROCESSING',
+    }).eq('id', deal_id)
 
     await supabase.from('disputes')
       .update({ status: 'RESOLVED', admin_decision: 'Released to seller' })

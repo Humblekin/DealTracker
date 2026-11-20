@@ -148,11 +148,17 @@ export default function AdminDashboard() {
     if (!window.confirm(`Change this user's role to ${label}?`)) return;
     setActionLoading(`user_${userId}`);
     try {
-      const { error } = await supabase.from('profiles').update({ role: newRole }).eq('id', userId);
+      const { data, error } = await supabase.functions.invoke('admin-update-role', {
+        body: { user_id: userId, role: newRole },
+      });
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
       toast.success('User role updated successfully.');
       loadAll();
-    } catch (err) { console.error(err); toast.error('Failed to update role.'); }
+    } catch (err) {
+      console.error(err);
+      toast.error(err.message || 'Failed to update role.');
+    }
     finally { setActionLoading(null); }
   }
 

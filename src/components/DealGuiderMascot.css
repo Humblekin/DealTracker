@@ -1,0 +1,156 @@
+/* DealGuider Mascot Component Styling */
+
+.dealguider-mascot-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  flex-shrink: 0;
+  user-select: none;
+  pointer-events: none; /* Decorative mascot shouldn't interfere with clicks */
+  transition: transform 0.25s ease-out;
+}
+
+.dealguider-mascot-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 6px 14px rgba(15, 23, 42, 0.08));
+  transition: filter 0.25s ease;
+}
+
+/* Size presets */
+.mascot-size-xs { width: 48px; height: 48px; }
+.mascot-size-sm { width: 72px; height: 72px; }
+.mascot-size-md { width: 120px; height: 120px; }
+.mascot-size-lg { width: 160px; height: 160px; }
+.mascot-size-xl { width: 220px; height: 220px; }
+
+/* Subtle Life & Personality Animations */
+.mascot-anim-float {
+  animation: mascotFloat 3.6s ease-in-out infinite alternate;
+}
+
+.mascot-anim-celebrate {
+  animation: mascotCelebrate 4s ease-in-out infinite;
+}
+
+.mascot-anim-wave {
+  animation: mascotWave 3.2s ease-in-out infinite alternate;
+}
+
+.mascot-anim-wobble {
+  animation: mascotWobble 4.5s ease-in-out infinite;
+}
+
+.mascot-anim-pulse {
+  animation: mascotPulse 3s ease-in-out infinite alternate;
+}
+
+.mascot-anim-shake {
+  animation: mascotShake 5s ease-in-out infinite;
+}
+
+.mascot-anim-fade {
+  animation: mascotEntrance 0.6s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+/* Keyframes */
+@keyframes mascotFloat {
+  0% {
+    transform: translateY(0px);
+  }
+  100% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes mascotCelebrate {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  30% {
+    transform: translateY(-8px) scale(1.02);
+  }
+  60% {
+    transform: translateY(-2px) scale(1);
+  }
+}
+
+@keyframes mascotWave {
+  0% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-4px) rotate(1.2deg);
+  }
+  100% {
+    transform: translateY(0px) rotate(-1.2deg);
+  }
+}
+
+@keyframes mascotWobble {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  20% {
+    transform: translateY(-3px) rotate(-1deg);
+  }
+  40% {
+    transform: translateY(-1px) rotate(1deg);
+  }
+  60% {
+    transform: translateY(0) rotate(0deg);
+  }
+}
+
+@keyframes mascotPulse {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1.03);
+  }
+}
+
+@keyframes mascotShake {
+  0%, 80%, 100% {
+    transform: rotate(0deg);
+  }
+  85% {
+    transform: rotate(-2deg);
+  }
+  90% {
+    transform: rotate(2deg);
+  }
+  95% {
+    transform: rotate(-1deg);
+  }
+}
+
+@keyframes mascotEntrance {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Accessibility: respects reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .mascot-anim-float,
+  .mascot-anim-celebrate,
+  .mascot-anim-wave,
+  .mascot-anim-wobble,
+  .mascot-anim-pulse,
+  .mascot-anim-shake,
+  .mascot-anim-fade {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+

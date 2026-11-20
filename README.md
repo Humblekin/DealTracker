@@ -40,6 +40,7 @@ supabase functions deploy paystack-payout
 
 # Admin functions
 supabase functions deploy admin-delete-user
+supabase functions deploy admin-update-role
 
 # Merchant integration functions
 supabase functions deploy merchant-register
@@ -93,6 +94,8 @@ Buyer pays via Paystack (inline popup)
 | `paystack-verify` | Manual "check payment status" — queries Paystack and advances escrow if confirmed |
 | `confirm-delivery` | Buyer confirms delivery → triggers Paystack Transfer to seller → COMPLETED |
 | `paystack-payout` | Admin-only: manual payout trigger via Paystack Transfers |
+| `admin-delete-user` | Admin-only: delete a user account and cleanly cancel deals |
+| `admin-update-role` | Admin-only: securely assign or change user roles |
 | `merchant-apply` | Public: e-commerce platform submits application for API access (status=PENDING) |
 | `merchant-check-status` | Authenticated merchant: check application/merchant status |
 | `create-api-key` | Admin/merchant: generate an API key for an ACTIVE merchant |

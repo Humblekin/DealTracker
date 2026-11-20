@@ -1,0 +1,119 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" width="100%" height="100%" fill="none">
+  <defs>
+    <radialGradient id="inv-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#38bdf8" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="inv-skin" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ba7d56"/>
+      <stop offset="100%" stop-color="#935733"/>
+    </linearGradient>
+    <linearGradient id="inv-skin-dark" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#935733"/>
+      <stop offset="100%" stop-color="#733d1f"/>
+    </linearGradient>
+    <linearGradient id="inv-hoodie" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00e5b8"/>
+      <stop offset="60%" stop-color="#00b4d8"/>
+      <stop offset="100%" stop-color="#0077b6"/>
+    </linearGradient>
+    <linearGradient id="inv-hoodie-dark" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0077b6"/>
+      <stop offset="100%" stop-color="#0d1b2a"/>
+    </linearGradient>
+    <linearGradient id="inv-pants" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <filter id="inv-shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="6" flood-color="#0d1b2a" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+
+  <ellipse cx="160" cy="296" rx="65" ry="10" fill="#0d1b2a" opacity="0.15"/>
+  <circle cx="160" cy="150" r="130" fill="url(#inv-glow)"/>
+
+  <!-- Question mark thought bubble above head -->
+  <g transform="translate(195, 42)">
+    <path d="M12 0 C24 0 34 8 34 18 C34 26 26 30 22 34 C20 36 20 39 20 42" stroke="#0284c7" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+    <circle cx="20" cy="50" r="2.8" fill="#0284c7"/>
+    <!-- Small bubble dots connecting to head -->
+    <circle cx="8" cy="52" r="3.5" fill="#38bdf8" opacity="0.8"/>
+    <circle cx="2" cy="62" r="2.2" fill="#38bdf8" opacity="0.6"/>
+  </g>
+
+  <!-- Broken link icon floating on the left -->
+  <g transform="translate(68, 120) rotate(-15)">
+    <path d="M14 6 L20 6 C24 6 27 9 27 13 L27 15 C27 19 24 22 20 22 L14 22" stroke="#94a3b8" stroke-width="3" stroke-linecap="round" fill="none"/>
+    <path d="M16 14 L12 14" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M6 22 L0 22 C-4 22 -7 19 -7 15 L-7 13 C-7 9 -4 6 0 6 L6 6" stroke="#94a3b8" stroke-width="3" stroke-linecap="round" fill="none"/>
+  </g>
+
+  <g filter="url(#inv-shadow)">
+    <!-- Legs -->
+    <path d="M140 245 L138 285 L128 288 C123 290 123 295 131 296 L151 296 C156 296 158 292 156 288 L151 245 Z" fill="url(#inv-pants)" stroke="#0f172a" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M170 245 L172 285 L182 288 C187 290 187 295 179 296 L159 296 C154 296 152 292 154 288 L159 245 Z" fill="url(#inv-pants)" stroke="#0f172a" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M128 291 C128 291 136 287 151 291 L151 295 L129 295 Z" fill="#00e5b8"/>
+    <path d="M182 291 C182 291 174 287 159 291 L159 295 L181 295 Z" fill="#00e5b8"/>
+
+    <!-- Left Arm: Hand raised scratching back of head in cute confusion -->
+    <path d="M120 170 L92 140 L115 75" stroke="url(#inv-hoodie)" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M120 170 L92 140 L115 75" stroke="#0077b6" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <!-- Hand scratching head -->
+    <circle cx="122" cy="74" r="9" fill="url(#inv-skin)" stroke="#733d1f" stroke-width="2"/>
+    <path d="M118 68 C122 66 128 68 130 72" stroke="#733d1f" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+
+    <!-- Torso -->
+    <path d="M120 165 C120 165 130 152 160 152 C190 152 200 165 200 165 L206 230 C206 242 196 248 185 248 L135 248 C124 248 114 242 114 230 Z" fill="url(#inv-hoodie)" stroke="#0f172a" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M132 216 L188 216 L182 242 L138 242 Z" fill="url(#inv-hoodie-dark)" opacity="0.35"/>
+    <path d="M154 175 L166 175 L166 185 C166 190 160 194 160 194 C160 194 154 190 154 185 Z" fill="#ffd166" stroke="#0d1b2a" stroke-width="1.5"/>
+    <path d="M156 177 L164 177 L164 184 C164 187 160 190 160 190 C160 190 156 187 156 184 Z" fill="#00e5b8"/>
+
+    <!-- Right Arm: Palm turned upward in "where did it go?" shrug -->
+    <path d="M198 170 L226 190 L242 180" stroke="url(#inv-hoodie)" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M198 170 L226 190 L242 180" stroke="#0077b6" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <!-- Right Open Palm Shrug Hand -->
+    <circle cx="245" cy="178" r="9" fill="url(#inv-skin)" stroke="#733d1f" stroke-width="2"/>
+    <path d="M242 172 C248 170 252 173 252 178" stroke="#733d1f" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+
+    <!-- Neck & Collar -->
+    <path d="M148 145 L172 145 L174 158 L146 158 Z" fill="url(#inv-skin-dark)"/>
+    <path d="M140 155 C145 168 175 168 180 155 C172 165 148 165 140 155 Z" fill="#0077b6" stroke="#0f172a" stroke-width="2"/>
+
+    <!-- Head (Tilted quizzically to the side) -->
+    <g transform="rotate(-6 160 100)">
+      <path d="M130 92 C130 65 190 65 190 92 C192 118 185 146 160 146 C135 146 128 118 130 92 Z" fill="url(#inv-skin)" stroke="#733d1f" stroke-width="2.5"/>
+
+      <!-- Ears -->
+      <circle cx="127" cy="105" r="9" fill="url(#inv-skin)" stroke="#733d1f" stroke-width="2"/>
+      <circle cx="193" cy="105" r="9" fill="url(#inv-skin)" stroke="#733d1f" stroke-width="2"/>
+
+      <!-- Hair -->
+      <path d="M126 88 C124 64 135 48 160 48 C185 48 196 64 194 88 C192 72 188 62 160 62 C132 62 128 72 126 88 Z" fill="#1b120c"/>
+      <path d="M128 78 C126 50 140 40 160 40 C180 40 194 50 192 78 C185 54 175 48 160 48 C145 48 135 54 128 78 Z" fill="#1b120c"/>
+      <circle cx="140" cy="50" r="10" fill="#241710"/>
+      <circle cx="155" cy="45" r="11" fill="#2b1c14"/>
+      <circle cx="170" cy="47" r="10.5" fill="#241710"/>
+      <circle cx="182" cy="56" r="9" fill="#1b120c"/>
+      <circle cx="132" cy="58" r="9" fill="#1b120c"/>
+
+      <!-- Eyebrows: One raised high, one lowered in confusion -->
+      <path d="M136 94 C140 95 148 95 152 92" stroke="#1b120c" stroke-width="3.2" stroke-linecap="round" fill="none"/>
+      <path d="M166 86 C172 82 180 84 185 88" stroke="#1b120c" stroke-width="3.2" stroke-linecap="round" fill="none"/>
+
+      <!-- Cute, slightly puzzled eyes -->
+      <ellipse cx="144" cy="103" rx="7" ry="8.5" fill="#1b120c"/>
+      <circle cx="143" cy="100" r="2.8" fill="#ffffff"/>
+      <ellipse cx="176" cy="103" rx="8" ry="9.5" fill="#1b120c"/>
+      <circle cx="174" cy="100" r="3.2" fill="#ffffff"/>
+      <circle cx="178.5" cy="105" r="1.3" fill="#ffffff"/>
+
+      <!-- Nose -->
+      <path d="M157 110 C158 114 162 114 163 110" stroke="#733d1f" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+
+      <!-- Puzzled, slightly wavy mouth ~ -->
+      <path d="M148 126 C153 124 158 129 164 125 C167 123 170 126 172 125" stroke="#733d1f" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+    </g>
+  </g>
+</svg>
+

@@ -59,25 +59,37 @@ serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     })
 
-    // ---- Transfer events (payouts) — record status, no escrow state change
+    // ---- Transfer events (payouts) — update payout status and finalize escrow on success
     if (event.startsWith('transfer.')) {
-      // Payout references are stored in the FUNDS_TRANSFERRED audit log,
-      // not in the incoming-payment reference columns on deals.
-      const { data: payoutLog } = await supabase
-        .from('audit_logs')
-        .select('id, deal_id, details')
-        .eq('action', 'FUNDS_TRANSFERRED')
-        .eq('details->>reference', reference)
+      // Look up deal directly by persistent payout_reference, or fallback to audit_logs
+      let dealId: string | null = null
+
+      const { data: directDeal } = await supabase
+        .from('deals')
+        .select('id, seller_id, buyer_id, title, status, payout_status')
+        .eq('payout_reference', reference)
         .maybeSingle()
 
-      if (!payoutLog?.deal_id) {
+      if (directDeal?.id) {
+        dealId = directDeal.id
+      } else {
+        const { data: payoutLog } = await supabase
+          .from('audit_logs')
+          .select('id, deal_id, details')
+          .eq('action', 'FUNDS_TRANSFERRED')
+          .eq('details->>reference', reference)
+          .maybeSingle()
+        dealId = payoutLog?.deal_id || null
+      }
+
+      if (!dealId) {
         return ok({ received: true, processed: false, reason: 'No payout found for this reference' })
       }
 
       const { data: deal } = await supabase
         .from('deals')
-        .select('id, seller_id, buyer_id, title')
-        .eq('id', payoutLog.deal_id)
+        .select('id, seller_id, buyer_id, title, status, payout_status')
+        .eq('id', dealId)
         .single()
 
       if (!deal) {
@@ -89,7 +101,7 @@ serve(async (req) => {
         : 'PAYOUT_REJECTED_BY_PROVIDER'
 
       console.log(
-        `[webhook] payout ${event} received (ref ${reference}) for deal ${payoutLog.deal_id}`
+        `[webhook] payout ${event} received (ref ${reference}) for deal ${deal.id}`
       )
 
       const { data: existingConfirmation } = await supabase
@@ -112,6 +124,16 @@ serve(async (req) => {
       })
 
       if (event === 'transfer.success') {
+        // Advance deal to COMPLETED and payout_status to SUCCESS
+        await supabase
+          .from('deals')
+          .update({
+            status: 'COMPLETED',
+            payout_status: 'SUCCESS',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', deal.id)
+
         await supabase.from('notifications').insert({
           user_id: deal.seller_id,
           title: 'Payment Received',
@@ -120,6 +142,15 @@ serve(async (req) => {
           deal_id: deal.id,
         })
       } else {
+        // Mark payout_status as FAILED (deal remains DELIVERED so it can be retried or resolved)
+        await supabase
+          .from('deals')
+          .update({
+            payout_status: 'FAILED',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', deal.id)
+
         await supabase.from('notifications').insert([
           {
             user_id: deal.seller_id,

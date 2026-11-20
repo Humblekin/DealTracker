@@ -7,8 +7,9 @@ import FeeBreakdown from '../components/FeeBreakdown';
 import { formatGHS } from '../utils/fees';
 import { DEAL_STATUS, PAYMENT_STATUS, getCounterpartyRoleLabel } from '../utils/constants';
 import { usePaystackPayment } from '../hooks/usePaystackPayment';
-import { Info, Link, CreditCard, CheckCircle, Package, AlertTriangle, X, Clock, PartyPopper } from 'lucide-react';
+import { Info, Link, CreditCard, CheckCircle, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
+import DealGuiderMascot from '../components/DealGuiderMascot';
 import './DealDetails.css';
 
 export default function DealDetails() {
@@ -285,7 +286,17 @@ export default function DealDetails() {
 
               {deal.status === DEAL_STATUS.AWAITING_PAYMENT && isBuyer && canRetryPayment && (
                 <div className="action-wrapper">
-                  <p className="action-hint">Fund the escrow to secure this transaction. Pay securely with Paystack (card or mobile money).</p>
+                  {deal.payment_status && [PAYMENT_STATUS.FAILED, PAYMENT_STATUS.ABANDONED, PAYMENT_STATUS.REVERSED].includes(deal.payment_status) ? (
+                    <div className="status-notice notice-danger deal-mascot-status-card" style={{ marginBottom: '16px' }}>
+                      <DealGuiderMascot variant="payment-failed" size="md" alt="Kofi holding payment receipt" />
+                      <div className="notice-content">
+                        <h4>Payment Not Completed</h4>
+                        <p>The previous payment was {deal.payment_status.toLowerCase()}. Your funds are safe—you can retry securely below.</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="action-hint">Fund the escrow to secure this transaction. Pay securely with Paystack (card or mobile money).</p>
+                  )}
                   <button className="btn btn-primary btn-full btn-lg action-btn" onClick={handlePayment} disabled={actionLoading || paying}>
                     {actionLoading || paying ? <><span className="spinner spinner-sm"></span> Initializing...</> : <><span className="btn-icon"><CreditCard size={16} /></span> Pay with Paystack</>}
                   </button>
@@ -297,10 +308,10 @@ export default function DealDetails() {
 
               {deal.status === DEAL_STATUS.AWAITING_PAYMENT && isBuyer && deal.payment_reference && !canRetryPayment && (
                 <div className="action-wrapper">
-                  <div className="status-notice notice-warning" style={{marginBottom: '12px'}}>
-                  <div className="notice-icon"><Clock size={20} /></div>
-                  <div className="notice-content">
-                    <h4>Payment {deal.payment_status === PAYMENT_STATUS.SUCCESS ? 'Confirmed' : 'Processing'}</h4>
+                  <div className="status-notice notice-warning deal-mascot-status-card" style={{marginBottom: '12px'}}>
+                    <DealGuiderMascot variant="processing" size="sm" alt="Kofi verifying payment" />
+                    <div className="notice-content">
+                      <h4>Payment {deal.payment_status === PAYMENT_STATUS.SUCCESS ? 'Confirmed' : 'Processing'}</h4>
                       <p>Your payment is being confirmed. Click the button below to check the status again.</p>
                     </div>
                   </div>
@@ -341,28 +352,28 @@ export default function DealDetails() {
               )}
 
               {deal.status === DEAL_STATUS.IN_ESCROW && isBuyer && deliveryConfirmed && (
-                <div className="status-notice notice-info">
-                  <div className="notice-icon"><Clock size={20} /></div>
+                <div className="status-notice notice-info deal-mascot-status-card">
+                  <DealGuiderMascot variant="processing" size="sm" alt="Kofi processing payout" />
                   <div className="notice-content">
                     <h4>Delivery Confirmed</h4>
-                    <p>Payout is being sent to the seller.</p>
+                    <p>Payout is being processed and sent to the seller.</p>
                   </div>
                 </div>
               )}
 
               {deal.status === DEAL_STATUS.IN_ESCROW && isSeller && !deliveryConfirmed && (
-                <div className="status-notice notice-warning">
-                  <div className="notice-icon"><Clock size={20} /></div>
+                <div className="status-notice notice-warning deal-mascot-status-card">
+                  <DealGuiderMascot variant="processing" size="sm" alt="Kofi holding escrow shield" />
                   <div className="notice-content">
                     <h4>Escrow Funded</h4>
-                    <p>Funds are secured. Fulfill the contract and wait for the buyer to confirm delivery.</p>
+                    <p>Funds are secured in escrow. Fulfill the contract and wait for the buyer to confirm delivery.</p>
                   </div>
                 </div>
               )}
 
               {deal.status === DEAL_STATUS.IN_ESCROW && isSeller && deliveryConfirmed && (
-                <div className="status-notice notice-success">
-                  <div className="notice-icon"><PartyPopper size={20} /></div>
+                <div className="status-notice notice-success deal-mascot-status-card">
+                  <DealGuiderMascot variant="processing" size="sm" alt="Kofi processing payout" />
                   <div className="notice-content">
                     <h4>Delivery Confirmed</h4>
                     <p>The buyer has confirmed delivery. Your payout is being sent to your mobile money.</p>
@@ -371,8 +382,8 @@ export default function DealDetails() {
               )}
 
               {deal.status === DEAL_STATUS.DELIVERED && isBuyer && (
-                <div className="status-notice notice-info">
-                  <div className="notice-icon"><Package size={20} /></div>
+                <div className="status-notice notice-info deal-mascot-status-card">
+                  <DealGuiderMascot variant="processing" size="sm" alt="Kofi processing payout" />
                   <div className="notice-content">
                     <h4>Delivery Confirmed</h4>
                     <p>You confirmed delivery. The seller will receive payment shortly.</p>
@@ -381,8 +392,8 @@ export default function DealDetails() {
               )}
 
               {deal.status === DEAL_STATUS.DELIVERED && isSeller && (
-                <div className="status-notice notice-success">
-                  <div className="notice-icon"><PartyPopper size={20} /></div>
+                <div className="status-notice notice-success deal-mascot-status-card">
+                  <DealGuiderMascot variant="processing" size="sm" alt="Kofi processing payout" />
                   <div className="notice-content">
                     <h4>Delivery Confirmed</h4>
                     <p>The buyer confirmed delivery. Your payout is on its way to your mobile money.</p>
@@ -391,18 +402,26 @@ export default function DealDetails() {
               )}
 
               {deal.status === DEAL_STATUS.COMPLETED && (
-                <div className="status-notice notice-success">
-                  <div className="notice-icon"><CheckCircle size={20} /></div>
+                <div className="deal-mascot-celebration-hero">
+                  <DealGuiderMascot variant="success" size="lg" alt="Kofi celebrating completed deal with trophy" />
+                  <h3>Transaction Completed!</h3>
+                  <p>All obligations have been fulfilled and funds have been disbursed successfully.</p>
+                </div>
+              )}
+
+              {deal.status === DEAL_STATUS.REFUNDED && (
+                <div className="status-notice notice-info deal-mascot-status-card">
+                  <DealGuiderMascot variant="refunded" size="sm" alt="Kofi with refund confirmation" />
                   <div className="notice-content">
-                    <h4>Transaction Completed</h4>
-                    <p>All obligations fulfilled and funds disbursed.</p>
+                    <h4>Transaction Refunded</h4>
+                    <p>Funds have been returned to the buyer according to arbitration or cancellation terms.</p>
                   </div>
                 </div>
               )}
 
               {deal.status === DEAL_STATUS.DISPUTED && (
-                <div className="status-notice notice-danger">
-                  <div className="notice-icon"><AlertTriangle size={20} /></div>
+                <div className="status-notice notice-danger deal-mascot-status-card">
+                  <DealGuiderMascot variant="disputed" size="sm" alt="Kofi inspecting dispute" />
                   <div className="notice-content">
                     <h4>Dispute Active</h4>
                     <p>This transaction is currently under administrative review.</p>
@@ -411,8 +430,8 @@ export default function DealDetails() {
               )}
 
               {deal.status === DEAL_STATUS.CANCELLED && (
-                <div className="status-notice notice-danger">
-                  <div className="notice-icon"><X size={20} /></div>
+                <div className="status-notice notice-danger deal-mascot-status-card">
+                  <DealGuiderMascot variant="cancelled" size="sm" alt="Kofi with cancelled deal" />
                   <div className="notice-content">
                     <h4>Deal Cancelled</h4>
                     <p>This transaction has been cancelled. No funds were exchanged.</p>

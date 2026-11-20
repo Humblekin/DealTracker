@@ -343,3 +343,43 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ===== DealGuider Mascot Integration ===== */
+.deal-mascot-status-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+}
+
+.deal-mascot-celebration-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 28px 20px 24px;
+  background: linear-gradient(145deg, rgba(16, 185, 129, 0.12) 0%, rgba(0, 212, 170, 0.05) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 10px 30px rgba(16, 185, 129, 0.08);
+  margin-bottom: 20px;
+}
+
+.deal-mascot-celebration-hero h3 {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--color-success);
+  margin-top: 14px;
+  margin-bottom: 6px;
+  letter-spacing: -0.01em;
+}
+
+.deal-mascot-celebration-hero p {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  max-width: 320px;
+  margin: 0 auto;
+}
+

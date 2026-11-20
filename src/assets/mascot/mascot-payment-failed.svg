@@ -1,0 +1,157 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" width="100%" height="100%" fill="none">
+  <defs>
+    <radialGradient id="fld-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ef4444" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#ef4444" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="fld-skin" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ba7d56"/>
+      <stop offset="100%" stop-color="#935733"/>
+    </linearGradient>
+    <linearGradient id="fld-skin-dark" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#935733"/>
+      <stop offset="100%" stop-color="#733d1f"/>
+    </linearGradient>
+    <linearGradient id="fld-hoodie" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00e5b8"/>
+      <stop offset="60%" stop-color="#00b4d8"/>
+      <stop offset="100%" stop-color="#0077b6"/>
+    </linearGradient>
+    <linearGradient id="fld-hoodie-dark" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0077b6"/>
+      <stop offset="100%" stop-color="#0d1b2a"/>
+    </linearGradient>
+    <linearGradient id="fld-pants" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="fld-paper" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f1f5f9"/>
+    </linearGradient>
+    <filter id="fld-shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="6" flood-color="#0d1b2a" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+
+  <!-- Ground Soft Shadow -->
+  <ellipse cx="160" cy="296" rx="65" ry="10" fill="#0d1b2a" opacity="0.15"/>
+  <!-- Subtle ambient alert glow -->
+  <circle cx="160" cy="150" r="130" fill="url(#fld-glow)"/>
+
+  <!-- Floating little concern particles -->
+  <circle cx="215" cy="72" r="3" fill="#f87171" opacity="0.75"/>
+  <circle cx="225" cy="62" r="2" fill="#f87171" opacity="0.6"/>
+  <path d="M98 75 C96 68 104 68 102 75 C100 80 100 80 100 84" stroke="#94a3b8" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+  <circle cx="100" cy="89" r="1.3" fill="#94a3b8"/>
+
+  <g filter="url(#fld-shadow)">
+    <!-- Legs / Feet (Slightly turned in worry) -->
+    <path d="M140 245 L138 285 L128 288 C123 290 123 295 131 296 L151 296 C156 296 158 292 156 288 L151 245 Z" fill="url(#fld-pants)" stroke="#0f172a" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M170 245 L172 285 L182 288 C187 290 187 295 179 296 L159 296 C154 296 152 292 154 288 L159 245 Z" fill="url(#fld-pants)" stroke="#0f172a" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M128 291 C128 291 136 287 151 291 L151 295 L129 295 Z" fill="#00e5b8"/>
+    <path d="M182 291 C182 291 174 287 159 291 L159 295 L181 295 Z" fill="#00e5b8"/>
+
+    <!-- Left Arm: Hand raised to cheek / chin in concern -->
+    <path d="M120 170 L96 190 L108 142" stroke="url(#fld-hoodie)" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M120 170 L96 190 L108 142" stroke="#0077b6" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <!-- Left Hand touching cheek -->
+    <circle cx="114" cy="136" r="9.5" fill="url(#fld-skin)" stroke="#733d1f" stroke-width="2"/>
+    <path d="M108 132 C114 135 118 132 120 137" stroke="#733d1f" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+
+    <!-- Torso / Hoodie -->
+    <path d="M120 165 C120 165 130 152 160 152 C190 152 200 165 200 165 L206 230 C206 242 196 248 185 248 L135 248 C124 248 114 242 114 230 Z" fill="url(#fld-hoodie)" stroke="#0f172a" stroke-width="2.5" stroke-linejoin="round"/>
+    <!-- Hoodie Pocket -->
+    <path d="M132 216 L188 216 L182 242 L138 242 Z" fill="url(#fld-hoodie-dark)" opacity="0.35"/>
+    <path d="M132 216 L188 216 L182 242 L138 242 Z" stroke="#0077b6" stroke-width="2" fill="none"/>
+    <!-- DealGuider Shield Emblem on Chest -->
+    <path d="M142 175 L154 175 L154 185 C154 190 148 194 148 194 C148 194 142 190 142 185 Z" fill="#ffd166" stroke="#0d1b2a" stroke-width="1.5"/>
+    <path d="M144 177 L152 177 L152 184 C152 187 148 190 148 190 C148 190 144 187 144 184 Z" fill="#00e5b8"/>
+
+    <!-- Right Arm (Holding Long Payment Receipt Forward) -->
+    <path d="M198 170 L212 195 L222 200" stroke="url(#fld-hoodie)" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M198 170 L212 195 L222 200" stroke="#0077b6" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <!-- Hand gripping receipt -->
+    <circle cx="225" cy="202" r="9" fill="url(#fld-skin)" stroke="#733d1f" stroke-width="2"/>
+
+    <!-- LONG PAYMENT RECEIPT -->
+    <g transform="translate(205, 120)">
+      <!-- Receipt Paper with zigzag bottom edge -->
+      <path d="M0 0 L56 0 L56 120 L50 114 L44 120 L38 114 L32 120 L26 114 L20 120 L14 114 L8 120 L0 112 Z" fill="url(#fld-paper)" stroke="#94a3b8" stroke-width="2" stroke-linejoin="round"/>
+      
+      <!-- Red Failed Alert Badge on top of receipt -->
+      <circle cx="28" cy="24" r="14" fill="#fee2e2" stroke="#ef4444" stroke-width="2"/>
+      <circle cx="28" cy="24" r="10" fill="#ef4444"/>
+      <!-- Exclamation mark '!' -->
+      <rect x="26.5" y="18" width="3" height="7" rx="1.5" fill="#ffffff"/>
+      <circle cx="28" cy="28.5" r="1.5" fill="#ffffff"/>
+
+      <!-- Receipt Text / Barcode Lines -->
+      <line x1="12" y1="46" x2="44" y2="46" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="12" y1="54" x2="36" y2="54" stroke="#cbd5e1" stroke-width="2" stroke-linecap="round"/>
+      
+      <!-- Amount row -->
+      <line x1="12" y1="64" x2="28" y2="64" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>
+      <line x1="34" y1="64" x2="44" y2="64" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round"/>
+
+      <!-- Divider -->
+      <line x1="10" y1="74" x2="46" y2="74" stroke="#cbd5e1" stroke-dasharray="3,3" stroke-width="1.5"/>
+
+      <!-- Failed status badge text line -->
+      <rect x="12" y="80" width="32" height="7" rx="2" fill="#fee2e2"/>
+      <line x1="16" y1="83.5" x2="40" y2="83.5" stroke="#ef4444" stroke-width="1.8" stroke-linecap="round"/>
+
+      <!-- Barcode at bottom -->
+      <line x1="12" y1="96" x2="12" y2="106" stroke="#475569" stroke-width="2"/>
+      <line x1="16" y1="96" x2="16" y2="106" stroke="#475569" stroke-width="1"/>
+      <line x1="19" y1="96" x2="19" y2="106" stroke="#475569" stroke-width="2.5"/>
+      <line x1="24" y1="96" x2="24" y2="106" stroke="#475569" stroke-width="1.5"/>
+      <line x1="28" y1="96" x2="28" y2="106" stroke="#475569" stroke-width="1"/>
+      <line x1="32" y1="96" x2="32" y2="106" stroke="#475569" stroke-width="2"/>
+      <line x1="37" y1="96" x2="37" y2="106" stroke="#475569" stroke-width="1"/>
+      <line x1="41" y1="96" x2="41" y2="106" stroke="#475569" stroke-width="2.5"/>
+    </g>
+
+    <!-- Neck & Hoodie Collar -->
+    <path d="M148 145 L172 145 L174 158 L146 158 Z" fill="url(#fld-skin-dark)"/>
+    <path d="M140 155 C145 168 175 168 180 155 C172 165 148 165 140 155 Z" fill="#0077b6" stroke="#0f172a" stroke-width="2"/>
+
+    <!-- Head / Face (Slightly tilted in concern) -->
+    <g transform="rotate(3 160 100)">
+      <path d="M130 92 C130 65 190 65 190 92 C192 118 185 146 160 146 C135 146 128 118 130 92 Z" fill="url(#fld-skin)" stroke="#733d1f" stroke-width="2.5"/>
+
+      <!-- Ears -->
+      <circle cx="127" cy="105" r="9" fill="url(#fld-skin)" stroke="#733d1f" stroke-width="2"/>
+      <circle cx="193" cy="105" r="9" fill="url(#fld-skin)" stroke="#733d1f" stroke-width="2"/>
+
+      <!-- Hair: Textured Afro Fade -->
+      <path d="M126 88 C124 64 135 48 160 48 C185 48 196 64 194 88 C192 72 188 62 160 62 C132 62 128 72 126 88 Z" fill="#1b120c"/>
+      <path d="M128 78 C126 50 140 40 160 40 C180 40 194 50 192 78 C185 54 175 48 160 48 C145 48 135 54 128 78 Z" fill="#1b120c"/>
+      <circle cx="140" cy="50" r="10" fill="#241710"/>
+      <circle cx="155" cy="45" r="11" fill="#2b1c14"/>
+      <circle cx="170" cy="47" r="10.5" fill="#241710"/>
+      <circle cx="182" cy="56" r="9" fill="#1b120c"/>
+      <circle cx="132" cy="58" r="9" fill="#1b120c"/>
+
+      <!-- Eyebrows (Concerned / Worried slants \ /) -->
+      <path d="M136 89 C140 92 147 94 152 95" stroke="#1b120c" stroke-width="3.2" stroke-linecap="round" fill="none"/>
+      <path d="M168 95 C173 94 180 92 184 89" stroke="#1b120c" stroke-width="3.2" stroke-linecap="round" fill="none"/>
+
+      <!-- Concerned, wide puppy-eyes -->
+      <ellipse cx="144" cy="104" rx="8" ry="9.5" fill="#1b120c"/>
+      <circle cx="143" cy="101" r="3.2" fill="#ffffff"/>
+      <circle cx="147" cy="107" r="1.3" fill="#ffffff"/>
+      <ellipse cx="176" cy="104" rx="8" ry="9.5" fill="#1b120c"/>
+      <circle cx="175" cy="101" r="3.2" fill="#ffffff"/>
+      <circle cx="179" cy="107" r="1.3" fill="#ffffff"/>
+
+      <!-- Nose -->
+      <path d="M157 111 C158 115 162 115 163 111" stroke="#733d1f" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+
+      <!-- Sympathetic, slightly open "oh no" mouth -->
+      <path d="M151 125 C151 122 169 122 169 125 C169 133 151 133 151 125 Z" fill="#7f1d1d" stroke="#733d1f" stroke-width="1.8"/>
+      <path d="M154 125 C157 127 163 127 166 125" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+    </g>
+  </g>
+</svg>
+

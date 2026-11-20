@@ -5,8 +5,14 @@
 // Amounts are converted to the smallest currency unit (pesewas).
 // ---------------------------------------------------------------
 
-const PAYSTACK_BASE_URL = Deno.env.get('PAYSTACK_BASE_URL') || 'https://api.paystack.co'
-const PAYSTACK_SECRET_KEY = Deno.env.get('PAYSTACK_SECRET_KEY')!
+function getEnv(key: string): string | undefined {
+  if (typeof Deno !== 'undefined') return Deno.env.get(key)
+  if (typeof process !== 'undefined' && process.env) return process.env[key]
+  return undefined
+}
+
+const PAYSTACK_BASE_URL = getEnv('PAYSTACK_BASE_URL') || 'https://api.paystack.co'
+const PAYSTACK_SECRET_KEY = getEnv('PAYSTACK_SECRET_KEY') || ''
 
 // Ghana mobile-money networks → Paystack bank codes
 const NETWORK_BANK_CODE: Record<string, string> = {
@@ -142,7 +148,7 @@ export async function verifyPayment(reference: string): Promise<VerifyPaymentRes
   }
 }
 
-// HMAC-SHA512 webhook signature verification (X-Paystack-Signature)
+// HMAC-SHA512 webhook signature verification (X-Paystack-Signature) with constant-time comparison
 export async function verifyWebhookSignature(
   rawBody: string,
   signature: string | null,
@@ -156,7 +162,15 @@ export async function verifyWebhookSignature(
   const mac = await crypto.subtle.sign('HMAC', key, msgBytes)
   const macHex = Array.from(new Uint8Array(mac)).map(b => b.toString(16).padStart(2, '0')).join('')
 
-  return macHex === signature.toLowerCase()
+  const sigLower = signature.toLowerCase().trim()
+  if (macHex.length !== sigLower.length) return false
+
+  // Constant-time comparison to prevent timing side-channel attacks
+  let diff = 0
+  for (let i = 0; i < macHex.length; i++) {
+    diff |= macHex.charCodeAt(i) ^ sigLower.charCodeAt(i)
+  }
+  return diff === 0
 }
 
 export interface CreateRecipientParams {
@@ -216,6 +230,7 @@ export interface TransferResult {
   success: boolean
   transfer_code?: string
   reference?: string
+  status?: string
   error?: string
 }
 
@@ -232,7 +247,7 @@ export async function initiateTransfer(params: TransferParams): Promise<Transfer
     }),
   })
 
-  const data = res.data as { status?: boolean; message?: string; data?: { transfer_code?: string; reference?: string } }
+  const data = res.data as { status?: boolean; message?: string; data?: { transfer_code?: string; reference?: string; status?: string } }
 
   if (!res.ok || data?.status !== true || !data.data) {
     return {
@@ -245,6 +260,7 @@ export async function initiateTransfer(params: TransferParams): Promise<Transfer
     success: true,
     transfer_code: data.data.transfer_code,
     reference: data.data.reference || params.reference,
+    status: data.data.status,
   }
 }
 
