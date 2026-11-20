@@ -24,7 +24,7 @@
   font-family: var(--font-display);
   font-size: 1rem;
   font-weight: 700;
-  color: var(--text-white);
+  color: var(--text-heading);
   padding-bottom: 12px;
   border-bottom: 1px solid var(--border-color);
   margin-bottom: 4px;
@@ -258,7 +258,7 @@
   font-family: var(--font-display);
   font-size: 1.1rem;
   font-weight: 700;
-  color: var(--text-white);
+  color: var(--text-heading);
 }
 
 .role-desc {

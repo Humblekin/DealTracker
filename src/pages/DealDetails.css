@@ -19,7 +19,7 @@
   font-family: var(--font-display);
   font-size: 2rem;
   font-weight: 800;
-  color: var(--text-white);
+  color: var(--text-heading);
   margin-bottom: 12px;
   line-height: 1.2;
 }
@@ -57,7 +57,7 @@
   font-family: var(--font-display);
   font-size: 2rem;
   font-weight: 800;
-  color: var(--text-white);
+  color: var(--text-heading);
   margin: 0;
 }
 
@@ -83,7 +83,7 @@
   font-family: var(--font-display);
   font-size: 1.1rem;
   font-weight: 700;
-  color: var(--text-white);
+  color: var(--text-heading);
   margin-bottom: 16px;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--border-color);
@@ -344,42 +344,83 @@
   }
 }
 
-/* ===== DealGuider Mascot Integration ===== */
-.deal-mascot-status-card {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 16px;
-}
-
-.deal-mascot-celebration-hero {
+/* ===== Deal Status Celebration Popup ===== */
+.deal-status-popup {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 12px;
   text-align: center;
-  padding: 28px 20px 24px;
-  background: linear-gradient(145deg, rgba(16, 185, 129, 0.12) 0%, rgba(0, 212, 170, 0.05) 100%);
-  border: 1px solid rgba(16, 185, 129, 0.28);
+  max-width: 440px;
+  padding: 36px 28px 28px;
+  background: var(--bg-card-solid);
+  border: 1px solid var(--border-color);
   border-radius: var(--radius-xl);
-  box-shadow: 0 10px 30px rgba(16, 185, 129, 0.08);
-  margin-bottom: 20px;
 }
 
-.deal-mascot-celebration-hero h3 {
+.deal-status-popup-success {
+  border-color: rgba(16, 185, 129, 0.35);
+  box-shadow: 0 10px 30px rgba(16, 185, 129, 0.12);
+}
+
+.deal-status-popup-processing {
+  border-color: rgba(6, 182, 212, 0.35);
+  box-shadow: 0 10px 30px rgba(6, 182, 212, 0.12);
+}
+
+.deal-status-popup-payment-failed,
+.deal-status-popup-disputed,
+.deal-status-popup-cancelled {
+  border-color: rgba(239, 68, 68, 0.35);
+  box-shadow: 0 10px 30px rgba(239, 68, 68, 0.1);
+}
+
+.deal-status-popup-refunded {
+  border-color: rgba(107, 114, 128, 0.35);
+  box-shadow: 0 10px 30px rgba(107, 114, 128, 0.1);
+}
+
+.deal-status-popup-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+}
+
+.deal-status-popup h2 {
   font-family: var(--font-display);
-  font-size: 1.35rem;
+  font-size: 1.4rem;
   font-weight: 800;
-  color: var(--color-success);
-  margin-top: 14px;
-  margin-bottom: 6px;
   letter-spacing: -0.01em;
 }
 
-.deal-mascot-celebration-hero p {
+.deal-status-popup-success h2 {
+  color: var(--color-success);
+}
+
+.deal-status-popup-processing h2 {
+  color: var(--color-info);
+}
+
+.deal-status-popup-payment-failed h2,
+.deal-status-popup-disputed h2,
+.deal-status-popup-cancelled h2 {
+  color: var(--color-danger);
+}
+
+.deal-status-popup-refunded h2 {
+  color: var(--text-secondary);
+}
+
+.deal-status-popup p {
   font-size: 0.9rem;
   color: var(--text-secondary);
   line-height: 1.5;
   max-width: 320px;
-  margin: 0 auto;
+  margin: 0;
+}
+
+.deal-status-popup-continue {
+  margin-top: 4px;
 }
 

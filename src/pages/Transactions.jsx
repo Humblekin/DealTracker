@@ -68,47 +68,64 @@ export default function Transactions() {
   return (
     <div className="page-wrapper transactions-page">
       <div className="container">
-        <div className="page-header text-center">
-          <h1>Transaction History</h1>
-          <p>Monitor and manage all your secure deals in one place</p>
-        </div>
-        
-        <div className="filter-bar">
-          {STATUS_FILTERS.map(f => {
-            const count = deals.filter(d => d.status === f.value).length;
-            if (f.value !== 'ALL' && count === 0) return null; // Hide empty filters
-            
-            return (
-              <button 
-                key={f.value} 
-                className={`filter-btn ${filter === f.value ? 'active' : ''}`} 
-                onClick={() => setFilter(f.value)}
-              >
-                {f.label}
-                {f.value !== 'ALL' && <span className="filter-count">{count}</span>}
-              </button>
-            )
-          })}
+        <div className="transactions-heading">
+          <div>
+            <p className="transactions-eyebrow">Your activity</p>
+            <h1>Transaction history</h1>
+            <p>Monitor and manage all your secure deals in one place.</p>
+          </div>
+          <div className="transactions-total" aria-live="polite">
+            <strong>{filtered.length}</strong>
+            <span>of {deals.length} deals shown</span>
+          </div>
         </div>
 
-        <div className="filter-bar filter-bar-payment">
-          {PAYMENT_FILTERS.map(f => {
-            const count = deals.filter(d => d.payment_status === f.value).length;
-            if (f.value !== 'ALL' && count === 0) return null; // Hide empty filters
-            
-            return (
-              <button 
-                key={f.value} 
-                className={`filter-btn ${paymentFilter === f.value ? 'active' : ''}`} 
-                onClick={() => setPaymentFilter(f.value)}
-              >
-                {f.label}
-                {f.value !== 'ALL' && <span className="filter-count">{count}</span>}
-              </button>
-            )
-          })}
+        <div className="transaction-filters">
+          <section className="transaction-filter-group" aria-label="Filter by deal status">
+            <h2>Deal status</h2>
+            <div className="filter-bar">
+              {STATUS_FILTERS.map(f => {
+                const count = deals.filter(d => d.status === f.value).length;
+                if (f.value !== 'ALL' && count === 0) return null;
+
+                return (
+                  <button
+                    key={f.value}
+                    className={`filter-btn ${filter === f.value ? 'active' : ''}`}
+                    onClick={() => setFilter(f.value)}
+                    aria-pressed={filter === f.value}
+                  >
+                    {f.label}
+                    {f.value !== 'ALL' && <span className="filter-count">{count}</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="transaction-filter-group" aria-label="Filter by payment status">
+            <h2>Payment status</h2>
+            <div className="filter-bar">
+              {PAYMENT_FILTERS.map(f => {
+                const count = deals.filter(d => d.payment_status === f.value).length;
+                if (f.value !== 'ALL' && count === 0) return null;
+
+                return (
+                  <button
+                    key={f.value}
+                    className={`filter-btn ${paymentFilter === f.value ? 'active' : ''}`}
+                    onClick={() => setPaymentFilter(f.value)}
+                    aria-pressed={paymentFilter === f.value}
+                  >
+                    {f.label}
+                    {f.value !== 'ALL' && <span className="filter-count">{count}</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
         </div>
-        
+
         {filtered.length === 0 ? (
           <div className="empty-state glass-card">
             <div className="empty-state-icon">

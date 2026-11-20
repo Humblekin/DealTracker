@@ -27,10 +27,11 @@ const ADMIN_NAV = [
   },
 ];
 
-export default function AdminSidebar() {
+export default function AdminSidebar({ mobileOpen = false, onNavigate }) {
   const { profile, signOut } = useAuth();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
+  const isCollapsed = collapsed && !mobileOpen;
 
   const isActive = (path, exact) => {
     if (exact) return location.pathname === path;
@@ -46,7 +47,7 @@ export default function AdminSidebar() {
   };
 
   return (
-    <aside className={`admin-sidebar ${collapsed ? 'collapsed' : ''}`}>
+    <aside className={`admin-sidebar ${isCollapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
       {/* Brand */}
       <div className="sidebar-header">
         <Link to="/admin" className="sidebar-brand">
@@ -63,7 +64,7 @@ export default function AdminSidebar() {
               </defs>
             </svg>
           </div>
-          {!collapsed && (
+          {!isCollapsed && (
             <span className="sidebar-brand-text">
               Secure<span className="brand-accent">Trade</span>
             </span>
@@ -75,7 +76,7 @@ export default function AdminSidebar() {
           aria-label="Toggle sidebar"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            {collapsed ? (
+            {isCollapsed ? (
               <polyline points="9 18 15 12 9 6" />
             ) : (
               <polyline points="15 18 9 12 15 6" />
@@ -88,7 +89,7 @@ export default function AdminSidebar() {
       <nav className="sidebar-nav">
         {ADMIN_NAV.map((section) => (
           <div key={section.section} className="sidebar-section">
-            {!collapsed && (
+            {!isCollapsed && (
               <div className="sidebar-section-label">{section.section}</div>
             )}
             <ul className="sidebar-menu">
@@ -97,13 +98,14 @@ export default function AdminSidebar() {
                   <Link
                     to={item.path}
                     className={`sidebar-link ${isActive(item.path, item.exact) ? 'active' : ''}`}
-                    title={collapsed ? item.label : undefined}
+                    title={isCollapsed ? item.label : undefined}
+                    onClick={onNavigate}
                   >
                     <span className="sidebar-link-icon">
                       <item.icon />
                     </span>
-                    {!collapsed && <span className="sidebar-link-text">{item.label}</span>}
-                    {!collapsed && isActive(item.path, item.exact) && (
+                    {!isCollapsed && <span className="sidebar-link-text">{item.label}</span>}
+                    {!isCollapsed && isActive(item.path, item.exact) && (
                       <span className="sidebar-active-dot" />
                     )}
                   </Link>
@@ -120,7 +122,7 @@ export default function AdminSidebar() {
           <div className="sidebar-user-avatar">
             {profile?.full_name?.charAt(0)?.toUpperCase() || 'A'}
           </div>
-          {!collapsed && (
+          {!isCollapsed && (
             <div className="sidebar-user-info">
               <span className="sidebar-user-name">{profile?.full_name || 'Admin'}</span>
               <span className="sidebar-user-role">Administrator</span>

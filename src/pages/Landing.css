@@ -108,7 +108,7 @@
   line-height: 1.1;
   margin-bottom: 24px;
   letter-spacing: -0.03em;
-  color: var(--text-white);
+  color: var(--text-heading);
 }
 
 .hero-subtitle {
@@ -183,7 +183,7 @@
   font-size: 2.5rem;
   font-weight: 800;
   margin-bottom: 16px;
-  color: var(--text-white);
+  color: var(--text-heading);
   letter-spacing: -0.02em;
 }
 
@@ -331,7 +331,7 @@
   font-size: 1.15rem;
   font-weight: 700;
   margin-bottom: 12px;
-  color: var(--text-white);
+  color: var(--text-heading);
   font-family: var(--font-display);
 }
 
@@ -402,7 +402,7 @@
   font-size: 1.15rem;
   font-weight: 700;
   margin-bottom: 12px;
-  color: var(--text-white);
+  color: var(--text-heading);
   font-family: var(--font-display);
 }
 
@@ -421,7 +421,7 @@
 .cta-card {
   text-align: center;
   padding: 80px 40px;
-  background: linear-gradient(135deg, rgba(15,23,42,0.8) 0%, rgba(10,14,26,0.9) 100%);
+  background: linear-gradient(135deg, var(--bg-card-solid) 0%, var(--bg-secondary) 100%);
   border-color: rgba(0, 212, 170, 0.2);
   position: relative;
 }
@@ -449,7 +449,7 @@
   font-size: 2.5rem;
   font-weight: 800;
   margin-bottom: 16px;
-  color: var(--text-white);
+  color: var(--text-heading);
   letter-spacing: -0.02em;
 }
 
@@ -479,7 +479,7 @@
   font-family: var(--font-display);
   font-size: 1.2rem;
   font-weight: 700;
-  color: var(--text-white);
+  color: var(--text-heading);
 }
 
 .footer-copy {
@@ -633,7 +633,7 @@
 
 .eaas-feature strong {
   display: block;
-  color: var(--text-white);
+  color: var(--text-heading);
   margin-bottom: 4px;
   font-size: 0.95rem;
 }

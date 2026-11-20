@@ -6,7 +6,7 @@
   right: 0;
   height: calc(var(--nav-height) + var(--safe-top));
   padding-top: var(--safe-top);
-  background: rgba(10, 14, 26, 0.75);
+  background: var(--bg-glass);
   backdrop-filter: blur(24px) saturate(1.2);
   -webkit-backdrop-filter: blur(24px) saturate(1.2);
   border-bottom: 1px solid var(--border-color);
@@ -123,6 +123,33 @@
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 0 11px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+}
+
+.theme-toggle:hover {
+  color: var(--accent-primary);
+  border-color: var(--border-accent);
+  background: var(--accent-glow);
+}
+
+.theme-toggle svg {
+  flex-shrink: 0;
 }
 
 .dev-link {
@@ -247,7 +274,7 @@
   font-weight: 600;
   color: var(--text-primary);
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   text-decoration: none;
   transition: all var(--transition-fast);
@@ -255,9 +282,9 @@
 }
 
 .btn-nav-login:hover {
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-primary);
+  border-color: var(--border-color-hover);
+  background: var(--bg-surface);
 }
 
 /* Login button compact on mobile */
@@ -269,6 +296,16 @@
 
   .navbar-right {
     gap: 6px;
+  }
+
+  .theme-toggle {
+    width: 38px;
+    min-width: 38px;
+    padding: 0;
+  }
+
+  .theme-toggle span {
+    display: none;
   }
 
   .navbar-user .user-info {

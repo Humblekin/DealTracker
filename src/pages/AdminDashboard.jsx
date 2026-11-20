@@ -17,8 +17,21 @@ function parseFees(deal) {
   } catch { return {}; }
 }
 
+async function getEdgeFunctionErrorMessage(error, fallback) {
+  if (error?.context instanceof Response) {
+    try {
+      const body = await error.context.clone().json();
+      if (typeof body?.error === 'string') return body.error;
+      if (typeof body?.message === 'string') return body.message;
+    } catch (parseError) {
+      console.error('Failed to read Edge Function error response:', parseError);
+    }
+  }
+  return error?.message || fallback;
+}
+
 export default function AdminDashboard() {
-  const { profile } = useAuth();
+  const { profile, getAccessToken } = useAuth();
   const { tab = 'overview' } = useParams();
   const [deals, setDeals] = useState([]);
   const [disputes, setDisputes] = useState([]);
@@ -96,6 +109,7 @@ export default function AdminDashboard() {
     if (!window.confirm(`Send GH₵ ${payoutAmount.toFixed(2)} to ${deal.seller_profile.full_name || 'the seller'} via Paystack (${deal.seller_profile.network.toUpperCase()} ${deal.seller_profile.phone})?`)) return;
     setActionLoading(dealId);
     try {
+      const accessToken = await getAccessToken();
       const { data, error } = await supabase.functions.invoke('paystack-payout', {
         body: {
           deal_id: dealId,
@@ -104,23 +118,15 @@ export default function AdminDashboard() {
           network: deal.seller_profile.network,
           narration: `DealGuider payout for "${deal.title}"`,
         },
+        headers: { Authorization: `Bearer ${accessToken}` },
       });
       if (error) throw error;
-      if (data?.success) {
-        toast.success('Payout sent to seller via Paystack.');
-      }
+      if (!data?.success) throw new Error(data?.error || 'Payout was not accepted.');
+      toast.success('Payout sent to seller via Paystack.');
       loadAll();
     } catch (err) {
       console.error(err);
-      let msg = err?.message || 'Payout failed. Please try again.';
-      const res = err?.context?.response;
-      if (res) {
-        try {
-          const body = await res.json();
-          if (body?.error) msg = body.error;
-        } catch { /* ignore */ }
-      }
-      toast.error(msg);
+      toast.error(await getEdgeFunctionErrorMessage(err, 'Payout failed. Please try again.'));
     }
     finally { setActionLoading(null); }
   }
@@ -235,14 +241,19 @@ export default function AdminDashboard() {
     if (!deletingTarget) return;
     setActionLoading(`del_${deletingTarget.id}`);
     try {
+      const accessToken = await getAccessToken();
       const { error } = await supabase.functions.invoke('admin-delete-user', {
         body: { user_id: deletingTarget.id },
+        headers: { Authorization: `Bearer ${accessToken}` },
       });
       if (error) throw error;
       toast.success('User deleted.');
       setDeletingTarget(null);
       loadAll();
-    } catch (err) { console.error(err); toast.error(err.message || 'Failed to delete user.'); }
+    } catch (err) {
+      console.error(err);
+      toast.error(await getEdgeFunctionErrorMessage(err, 'Failed to delete user.'));
+    }
     finally { setActionLoading(null); }
   }
 
@@ -473,17 +484,17 @@ export default function AdminDashboard() {
         )}
 
         {tab === 'users' && (
-          <div className="table-wrapper">
-            <table className="data-table">
+          <div className="table-wrapper users-table-wrapper">
+            <table className="data-table users-table">
               <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Joined</th><th>Actions</th></tr></thead>
               <tbody>
                 {users.map(u => (
                   <tr key={u.id}>
-                    <td style={{ fontWeight: 500 }}>{u.full_name}</td>
-                    <td className="text-muted">{u.email}</td>
-                    <td><span className={`badge ${u.role === 'admin' ? 'badge-escrow' : 'badge-pending'}`}>{u.role === 'admin' ? 'Admin' : 'User'}</span></td>
-                    <td className="text-muted">{new Date(u.created_at).toLocaleDateString('en-GH', { year: 'numeric', month: 'short', day: 'numeric' })}</td>
-                    <td>
+                    <td data-label="Name" style={{ fontWeight: 500 }}>{u.full_name}</td>
+                    <td data-label="Email" className="text-muted">{u.email}</td>
+                    <td data-label="Role"><span className={`badge ${u.role === 'admin' ? 'badge-escrow' : 'badge-pending'}`}>{u.role === 'admin' ? 'Admin' : 'User'}</span></td>
+                    <td data-label="Joined" className="text-muted">{new Date(u.created_at).toLocaleDateString('en-GH', { year: 'numeric', month: 'short', day: 'numeric' })}</td>
+                    <td data-label="Actions">
                       <div className="admin-actions">
                         {profile.id !== u.id ? (
                           <>

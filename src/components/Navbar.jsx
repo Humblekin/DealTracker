@@ -2,9 +2,10 @@ import { useAuth } from '../hooks/useAuth';
 import { Link } from 'react-router-dom';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import ThemeToggle from './ThemeToggle';
 import './Navbar.css';
 
-export default function Navbar({ isAdminLayout = false, showSidebar = false, onToggleSidebar, onOpenDrawer }) {
+export default function Navbar({ isAdminLayout = false, showSidebar = false, onToggleSidebar, onOpenDrawer, onOpenAdminMenu }) {
   const { user, profile, signOut } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [showNotifs, setShowNotifs] = useState(false);
@@ -45,6 +46,19 @@ export default function Navbar({ isAdminLayout = false, showSidebar = false, onT
   return (
     <nav className={`navbar ${isAdminLayout ? 'navbar-admin' : ''} ${showSidebar ? 'navbar-user-sidebar' : ''}`}>
       <div className="navbar-inner container">
+        {isAdminLayout && (
+          <button
+            className="sidebar-mobile-toggle show-mobile-inline"
+            onClick={onOpenAdminMenu}
+            aria-label="Open admin navigation"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
+        )}
         {showSidebar && (
           <>
             <button
@@ -95,6 +109,7 @@ export default function Navbar({ isAdminLayout = false, showSidebar = false, onT
         {user && (
           <>
             <div className="navbar-right" style={{ marginLeft: 'auto' }}>
+              <ThemeToggle />
               <div className="notif-bell-wrapper" ref={notifRef}>
                 <button className="notif-bell" onClick={() => setShowNotifs(!showNotifs)} aria-label="Notifications">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
@@ -143,6 +158,7 @@ export default function Navbar({ isAdminLayout = false, showSidebar = false, onT
 
         {!user && (
           <div className="navbar-right" style={{ marginLeft: 'auto' }}>
+            <ThemeToggle />
             <Link to="/developer" className="api-badge show-desktop-inline-flex">
               <span className="api-badge-bracket">&lt;/&gt;</span> API
             </Link>

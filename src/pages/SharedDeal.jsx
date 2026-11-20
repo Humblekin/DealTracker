@@ -88,10 +88,10 @@ export default function SharedDeal() {
   return (
     <div className="page-wrapper shared-deal-page">
       <div className="container-sm">
-        <div className="deal-card glass-card">
-          <div className="deal-card-header">
+        <div className="shared-deal-card glass-card">
+          <div className="shared-deal-card-header">
             <StatusBadge status={deal.status} />
-            <div className="deal-card-amount">
+            <div className="shared-deal-card-amount">
               <span className="amount-label">Amount</span>
               <p className="deal-amount-val">{formatGHS(deal.amount)}</p>
             </div>
@@ -127,7 +127,7 @@ export default function SharedDeal() {
             )}
           </div>
 
-          <div className="deal-card-footer">
+          <div className="shared-deal-card-footer">
             {isCreator && deal.status === DEAL_STATUS.AWAITING_COUNTERPARTY && (
               <p className="waiting-message">
                 Waiting for a {joinRole.toLowerCase()} to join...

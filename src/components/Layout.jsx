@@ -19,9 +19,22 @@ export default function Layout() {
   if (showAdminSidebar) {
     return (
       <div className="admin-layout">
-        <AdminSidebar />
+        {mobileSidebarOpen && (
+          <button
+            className="admin-sidebar-overlay"
+            aria-label="Close admin navigation"
+            onClick={() => setMobileSidebarOpen(false)}
+          />
+        )}
+        <AdminSidebar
+          mobileOpen={mobileSidebarOpen}
+          onNavigate={() => setMobileSidebarOpen(false)}
+        />
         <div className="admin-main-area">
-          <Navbar isAdminLayout />
+          <Navbar
+            isAdminLayout
+            onOpenAdminMenu={() => setMobileSidebarOpen(true)}
+          />
           <main className="admin-content">
             <Outlet />
           </main>

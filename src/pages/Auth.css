@@ -134,7 +134,7 @@
 .auth-page .auth-card {
   padding: 48px 40px;
   border-radius: var(--radius-2xl);
-  background: rgba(15, 23, 42, 0.72);
+  background: var(--bg-glass);
   backdrop-filter: blur(24px) saturate(1.4);
   -webkit-backdrop-filter: blur(24px) saturate(1.4);
   border: 1px solid rgba(0, 212, 170, 0.16);
@@ -202,13 +202,13 @@
   font-family: var(--font-display);
   font-size: 1.4rem;
   font-weight: 700;
-  color: var(--text-white);
+  color: var(--text-heading);
   margin-bottom: 30px;
   animation: fadeDown 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.05s both;
 }
 
 .auth-brand:hover {
-  color: var(--text-white);
+  color: var(--text-heading);
 }
 
 .auth-brand svg {
@@ -227,7 +227,7 @@
   font-weight: 800;
   margin-bottom: 10px;
   letter-spacing: -0.02em;
-  background: linear-gradient(135deg, #ffffff 0%, #cfe8f7 100%);
+  background: linear-gradient(135deg, var(--text-heading) 0%, var(--text-secondary) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -287,7 +287,7 @@
 
 .auth-input-wrap .form-input {
   padding-left: 46px;
-  background: rgba(19, 27, 46, 0.85);
+  background: var(--bg-surface);
   border-color: rgba(99, 120, 150, 0.18);
 }
 
@@ -302,7 +302,7 @@
 
 .auth-input-wrap:focus-within .form-input {
   border-color: var(--accent-primary);
-  background: rgba(19, 27, 46, 0.95);
+  background: var(--bg-card-solid);
   box-shadow:
     0 0 0 3px rgba(0, 212, 170, 0.08),
     0 0 26px rgba(0, 212, 170, 0.14);

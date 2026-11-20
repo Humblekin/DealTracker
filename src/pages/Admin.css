@@ -1,6 +1,6 @@
 /* ===== Admin Dashboard ===== */
 .admin-wrapper {
-  padding-top: calc(var(--safe-top) + 40px);
+  padding-top: 24px;
   padding-bottom: 60px;
 }
 
@@ -19,7 +19,7 @@
   font-family: var(--font-display);
   font-size: 1.2rem;
   font-weight: 700;
-  color: var(--text-white);
+  color: var(--text-heading);
 }
 
 .payout-cell {
@@ -29,7 +29,7 @@
 .network-tag {
   display: inline-block;
   text-transform: uppercase;
-  color: var(--text-white);
+  color: var(--text-heading);
   background: var(--accent-primary);
   padding: 2px 6px;
   border-radius: var(--radius-xs);
@@ -42,7 +42,7 @@
 .amount-cell {
   font-family: var(--font-display);
   font-weight: 700;
-  color: var(--text-white);
+  color: var(--text-heading);
 }
 
 .profit-cell {
@@ -100,6 +100,92 @@
 
 .text-muted {
   color: var(--text-muted);
+}
+
+@media (max-width: 768px) {
+  .users-table-wrapper {
+    margin: 0;
+    overflow: visible;
+    border: 0;
+    background: transparent;
+  }
+
+  .users-table {
+    display: block;
+    min-width: 0;
+    font-size: 0.875rem;
+  }
+
+  .users-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .users-table tbody {
+    display: grid;
+    gap: 12px;
+  }
+
+  .users-table tbody tr {
+    display: block;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    background: var(--bg-card-solid);
+  }
+
+  .users-table tbody tr:hover td {
+    background: transparent;
+  }
+
+  .users-table td {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    min-width: 0;
+    padding: 11px 14px;
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+
+  .users-table td::before {
+    flex: 0 0 64px;
+    color: var(--text-muted);
+    content: attr(data-label);
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-align: left;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .users-table td:last-child {
+    display: block;
+    border-bottom: 0;
+    text-align: left;
+  }
+
+  .users-table td:last-child::before {
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  .users-table .admin-actions {
+    gap: 8px;
+  }
+
+  .users-table .admin-actions .form-input {
+    flex: 1;
+    min-width: 0;
+  }
 }
 
 /* ---- Admin Action Buttons ---- */

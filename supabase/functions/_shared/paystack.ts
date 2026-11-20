@@ -17,7 +17,7 @@ const PAYSTACK_SECRET_KEY = getEnv('PAYSTACK_SECRET_KEY') || ''
 // Ghana mobile-money networks → Paystack bank codes
 const NETWORK_BANK_CODE: Record<string, string> = {
   mtn: 'MTN',
-  vodafone: 'VODAFONE',
+  vodafone: 'VOD',
   tigo: 'ATL',
   atl: 'ATL',
   airteltigo: 'ATL',

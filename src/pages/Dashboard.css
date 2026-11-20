@@ -29,7 +29,7 @@
   font-weight: 800;
   margin-bottom: 4px;
   letter-spacing: -0.02em;
-  color: var(--text-white);
+  color: var(--text-heading);
 }
 
 .dashboard-role {
@@ -93,7 +93,7 @@
   font-family: var(--font-display);
   font-size: 1.15rem;
   font-weight: 700;
-  color: var(--text-white);
+  color: var(--text-heading);
   margin-bottom: 4px;
 }
 
@@ -132,7 +132,7 @@
   font-family: var(--font-display);
   font-size: 1.1rem;
   font-weight: 600;
-  color: var(--text-white);
+  color: var(--text-heading);
   letter-spacing: 1px;
 }
 
@@ -179,7 +179,7 @@
   font-family: var(--font-display);
   font-size: 1.5rem;
   font-weight: 700;
-  color: var(--text-white);
+  color: var(--text-heading);
 }
 
 .deals-grid {

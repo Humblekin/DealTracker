@@ -121,7 +121,9 @@ export default function UserSidebar({ mobileOpen }) {
           {!collapsed && (
             <div className="sidebar-user-info">
               <span className="sidebar-user-name">{profile?.full_name || 'User'}</span>
-              <span className="sidebar-user-role">{profile?.role || 'user'}</span>
+              <span className="sidebar-user-role">
+                {profile?.role === 'admin' ? 'Administrator' : 'Member'}
+              </span>
             </div>
           )}
         </div>

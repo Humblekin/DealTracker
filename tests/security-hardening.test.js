@@ -553,7 +553,16 @@ describe('SECTION 2: Payout Concurrency & Atomic Protection', () => {
 // ============================================================================
 
 describe('SECTION 3: Paystack Webhook Security & Reconciliation', () => {
-  test('3.1: verifyWebhookSignature constant-time HMAC validation', async () => {
+  test('3.1: Ghana mobile money networks use Paystack bank codes', async () => {
+    const { networkBankCode } = await import('../supabase/functions/_shared/paystack.ts');
+
+    assert.equal(networkBankCode('mtn'), 'MTN');
+    assert.equal(networkBankCode('vodafone'), 'VOD');
+    assert.equal(networkBankCode('tigo'), 'ATL');
+    assert.equal(networkBankCode('unknown'), null);
+  });
+
+  test('3.2: verifyWebhookSignature constant-time HMAC validation', async () => {
     const { verifyWebhookSignature } = await import('../supabase/functions/_shared/paystack.ts');
 
     const secret = 'sk_test_fake_secret_key_12345';

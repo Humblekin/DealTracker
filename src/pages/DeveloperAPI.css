@@ -6,7 +6,7 @@
 .devapi-hero {
   background: linear-gradient(135deg, rgba(0, 212, 170, 0.06) 0%, rgba(0, 180, 216, 0.04) 100%);
   border-bottom: 1px solid var(--border-color);
-  padding: 80px 0 60px;
+  padding: calc(var(--nav-height) + var(--safe-top) + 24px) 0 60px;
   text-align: center;
   position: relative;
   overflow: hidden;
@@ -453,8 +453,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #0f172a;
-  border: 1px solid rgba(148, 163, 184, 0.12);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   padding: 10px 14px;
   margin-top: 4px;
@@ -534,7 +534,7 @@
   }
 
   .devapi-hero {
-    padding: 60px 0 40px;
+    padding: calc(var(--nav-height) + var(--safe-top) + 20px) 0 40px;
   }
 
   .devapi-section h2 {

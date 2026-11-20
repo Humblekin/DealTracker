@@ -28,8 +28,9 @@ serve(async (req) => {
 
   try {
     const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: cors })
+    const bearerMatch = authHeader?.match(/^Bearer\s+(\S+)$/i)
+    if (!bearerMatch) {
+      return new Response(JSON.stringify({ error: 'Missing or malformed bearer token' }), { status: 401, headers: cors })
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
@@ -37,10 +38,11 @@ serve(async (req) => {
     })
 
     const { data: { user }, error: userError } = await supabase.auth.getUser(
-      authHeader.replace('Bearer ', '')
+      bearerMatch[1]
     )
     if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: cors })
+      console.error('Failed to validate admin delete caller:', userError?.message || 'No user returned')
+      return new Response(JSON.stringify({ error: 'Session is invalid or expired. Please sign in again.' }), { status: 401, headers: cors })
     }
 
     const { data: caller } = await supabase
@@ -88,7 +90,7 @@ serve(async (req) => {
     const dealIds = (deals || []).map((d) => d.id)
 
     // 1. Cancel pending deals and detach the user as a party
-    await Promise.all((deals || []).map((d) =>
+    const dealUpdateResults = await Promise.all((deals || []).map((d) =>
       supabase.from('deals').update({
         status: d.status === 'AWAITING_COUNTERPARTY' || d.status === 'AWAITING_PAYMENT'
           ? 'CANCELLED'
@@ -97,6 +99,8 @@ serve(async (req) => {
         ...(d.seller_id === user_id && { seller_id: null }),
       }).eq('id', d.id)
     ))
+    const failedDealUpdate = dealUpdateResults.find(({ error }) => error)?.error
+    if (failedDealUpdate) throw failedDealUpdate
 
     // 2. Remove the user's notifications
     const { error: notifError } = await supabase
@@ -121,7 +125,7 @@ serve(async (req) => {
 
     // 5. Record the deletion in the admin's audit trail first
     if (dealIds.length > 0) {
-      await supabase.from('audit_logs').insert({
+      const { error: auditInsertError } = await supabase.from('audit_logs').insert({
         deal_id: dealIds[0],
         action: 'USER_DELETED',
         actor_id: user.id,
@@ -132,6 +136,7 @@ serve(async (req) => {
           cancelled_deals: deals.filter((d) => d.status === 'AWAITING_COUNTERPARTY' || d.status === 'AWAITING_PAYMENT').length,
         },
       })
+      if (auditInsertError) throw auditInsertError
     }
 
     // 6. Delete the auth user (cascades to the profile row)
