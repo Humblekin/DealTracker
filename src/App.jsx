@@ -19,7 +19,7 @@ const DeveloperAPI = lazy(() => import('./pages/DeveloperAPI'));
 
 function PageLoader() {
   return (
-    <div className="loading-screen">
+    <div className="loading-screen" role="status" aria-live="polite" aria-busy="true">
       <div className="spinner"></div>
       <p>Loading...</p>
     </div>

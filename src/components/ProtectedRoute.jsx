@@ -6,7 +6,7 @@ export default function ProtectedRoute({ children, allowedRoles }) {
 
   if (loading) {
     return (
-      <div className="loading-screen">
+      <div className="loading-screen" role="status" aria-live="polite" aria-busy="true">
         <div className="spinner"></div>
         <p>Loading...</p>
       </div>

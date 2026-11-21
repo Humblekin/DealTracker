@@ -23,13 +23,14 @@ export default function SharedDeal() {
 
   useEffect(() => {
     if (!shareToken) return;
-    supabase.from('deals')
-      .select('*, buyer_profile:profiles!buyer_id(full_name), seller_profile:profiles!seller_id(full_name)')
-      .eq('share_token', shareToken)
-      .single()
+    supabase.rpc('get_shared_deal', { p_share_token: shareToken })
       .then(({ data, error }) => {
         if (error || !data) setError('Deal not found');
-        else setDeal(data);
+        else setDeal({
+          ...data,
+          buyer_profile: data.buyer_name ? { full_name: data.buyer_name } : null,
+          seller_profile: data.seller_name ? { full_name: data.seller_name } : null,
+        });
       })
       .finally(() => setLoading(false));
   }, [shareToken]);

@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.106.2'
+import { isApiKeyExpired, isMerchantPermissionAllowed } from './merchant-validation.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -18,6 +19,13 @@ export interface AuthResult {
   environment: 'test' | 'live'
   permissions: Record<string, unknown>
 }
+
+export type MerchantPermission =
+  | 'create_escrow'
+  | 'verify_payment'
+  | 'read_transactions'
+  | 'confirm_shipment'
+  | 'release_funds'
 
 export async function authenticateMerchant(apiKey: string): Promise<AuthResult> {
   if (!apiKey) {
@@ -42,7 +50,7 @@ export async function authenticateMerchant(apiKey: string): Promise<AuthResult> 
 
   const { data: keys, error: keyError } = await supabase
     .from('merchant_api_keys')
-    .select('id, key_hash, merchant_id, is_active, environment, permissions')
+    .select('id, key_hash, merchant_id, is_active, environment, permissions, expires_at')
     .eq('key_prefix', prefix)
     .eq('is_active', true)
 
@@ -67,7 +75,7 @@ export async function authenticateMerchant(apiKey: string): Promise<AuthResult> 
     throw new AuthError('Invalid API key')
   }
 
-  if (matchedKey.expires_at && new Date(matchedKey.expires_at) < new Date()) {
+  if (isApiKeyExpired(matchedKey.expires_at)) {
     throw new AuthError('API key has expired')
   }
 
@@ -90,9 +98,17 @@ export async function authenticateMerchant(apiKey: string): Promise<AuthResult> 
     .update({ last_used_at: new Date().toISOString() })
     .eq('id', matchedKey.id)
 
-  const permissions = typeof matchedKey.permissions === 'string'
-    ? JSON.parse(matchedKey.permissions)
-    : (matchedKey.permissions || {})
+  let permissions = matchedKey.permissions || {}
+  if (typeof permissions === 'string') {
+    try {
+      permissions = JSON.parse(permissions)
+    } catch {
+      throw new AuthError('Invalid API key permissions')
+    }
+  }
+  if (!permissions || typeof permissions !== 'object' || Array.isArray(permissions)) {
+    throw new AuthError('Invalid API key permissions')
+  }
 
   return {
     merchantId: merchant.id,
@@ -108,6 +124,12 @@ export async function authenticateMerchant(apiKey: string): Promise<AuthResult> 
     keyId: matchedKey.id,
     environment: matchedKey.environment,
     permissions,
+  }
+}
+
+export function requireMerchantPermission(auth: AuthResult, permission: MerchantPermission): void {
+  if (!isMerchantPermissionAllowed(auth.permissions, permission)) {
+    throw new AuthError(`This API key is not permitted to ${permission.replaceAll('_', ' ')}`)
   }
 }
 

@@ -15,8 +15,8 @@ verify_jwt = false
 [functions.merchant-release-funds]
 verify_jwt = false
 
-[functions.merchant-get-transaction]
+[functions.merchant-confirm-shipment]
 verify_jwt = false
 
-[functions.merchant-confirm-shipment]
+[functions.merchant-get-transaction]
 verify_jwt = false

@@ -38,7 +38,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: cors })
     }
 
-    const { deal_id, redirect_url } = await req.json()
+    const { deal_id } = await req.json()
     if (!deal_id) {
       return new Response(JSON.stringify({ error: 'deal_id is required' }), { status: 400, headers: cors })
     }
@@ -69,7 +69,7 @@ serve(async (req) => {
       amount: deal.amount,
       email: deal.buyer.email,
       reference,
-      callbackUrl: redirect_url || `${SUPABASE_URL}/functions/v1/paystack-webhook`,
+      callbackUrl: `${SUPABASE_URL}/functions/v1/paystack-webhook`,
       metadata: {
         deal_id: deal.id,
         buyer_id: deal.buyer_id,

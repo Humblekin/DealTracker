@@ -1,10 +1,11 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.106.2'
 import { corsHeaders, handleCors, methodNotAllowed } from '../_shared/cors.ts'
-import { authenticateMerchant, AuthError } from '../_shared/merchant-auth.ts'
+import { authenticateMerchant, AuthError, requireMerchantPermission } from '../_shared/merchant-auth.ts'
 import { initPayment } from '../_shared/paystack.ts'
 import { calculateFees } from '../_shared/fees.ts'
 import { deliverWebhook } from '../_shared/webhook.ts'
+import { isAllowedPaymentRedirect } from '../_shared/redirect-validation.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -25,6 +26,7 @@ serve(async (req) => {
     }
 
     const auth = await authenticateMerchant(apiKey)
+    requireMerchantPermission(auth, 'create_escrow')
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: { autoRefreshToken: false, persistSession: false },
     })
@@ -52,15 +54,33 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'customer_email is required for payment initiation' }), { status: 400, headers: cors })
     }
 
+    const redirectOrigins = (Deno.env.get('PAYMENT_REDIRECT_ORIGINS') || '')
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean)
+    if (redirect_url && !isAllowedPaymentRedirect(redirect_url, redirectOrigins)) {
+      return new Response(JSON.stringify({
+        error: 'redirect_url must use HTTPS and match a configured payment redirect origin.',
+      }), { status: 400, headers: cors })
+    }
+
     // Check idempotency
     if (idempotency_key) {
-      const { data: existing } = await supabase
+      const { data: existing, error: existingError } = await supabase
         .from('merchant_transactions')
-        .select('id, deal_id, status, payment_url')
+        .select('id, merchant_id, deal_id, status, payment_url')
         .eq('idempotency_key', idempotency_key)
-        .single()
+        .maybeSingle()
+
+      if (existingError) throw existingError
 
       if (existing) {
+        if (existing.merchant_id !== auth.merchantId) {
+          return new Response(JSON.stringify({
+            error: 'This idempotency key has already been used.',
+          }), { status: 409, headers: cors })
+        }
+
         return new Response(JSON.stringify({
           success: true,
           transaction_id: existing.id,

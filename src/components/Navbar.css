@@ -561,6 +561,13 @@
 }
 
 .notif-item {
+  display: block;
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  background: transparent;
+  border: 0;
   padding: 14px 20px;
   cursor: pointer;
   border-bottom: 1px solid var(--border-color);

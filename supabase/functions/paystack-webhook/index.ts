@@ -88,17 +88,27 @@ serve(async (req) => {
 
       const { data: deal } = await supabase
         .from('deals')
-        .select('id, seller_id, buyer_id, title, status, payout_status')
+        .select('id, seller_id, buyer_id, title, status, payout_status, payout_reference')
         .eq('id', dealId)
         .single()
 
       if (!deal) {
         return ok({ received: true, processed: false, reason: 'Payout deal not found' })
       }
+      if (deal.payout_reference && deal.payout_reference !== reference) {
+        return ok({ received: true, processed: false, reason: 'Stale payout reference' })
+      }
 
       const providerAction = event === 'transfer.success'
         ? 'PAYOUT_CONFIRMED_BY_PROVIDER'
         : 'PAYOUT_REJECTED_BY_PROVIDER'
+
+      const { data: merchantTransaction } = await supabase
+        .from('merchant_transactions')
+        .select('id')
+        .eq('deal_id', deal.id)
+        .eq('payout_reference', reference)
+        .maybeSingle()
 
       console.log(
         `[webhook] payout ${event} received (ref ${reference}) for deal ${deal.id}`
@@ -116,23 +126,24 @@ serve(async (req) => {
         return ok({ received: true, processed: true, duplicate: true })
       }
 
-      await supabase.from('audit_logs').insert({
-        deal_id: deal.id,
-        action: providerAction,
-        actor_id: null,
-        details: { reference, event },
-      })
-
       if (event === 'transfer.success') {
-        // Advance deal to COMPLETED and payout_status to SUCCESS
-        await supabase
-          .from('deals')
-          .update({
-            status: 'COMPLETED',
-            payout_status: 'SUCCESS',
-            updated_at: new Date().toISOString(),
+        if (merchantTransaction) {
+          const { data: finalized, error: finalizeError } = await supabase.rpc('finalize_merchant_payout', {
+            p_transaction_id: merchantTransaction.id,
+            p_payout_reference: reference,
+            p_new_payout_status: 'SUCCESS',
           })
-          .eq('id', deal.id)
+          if (finalizeError) throw finalizeError
+          if (!finalized?.success) return ok({ received: true, processed: false, reason: finalized?.error })
+        } else {
+          const { data: finalized, error: finalizeError } = await supabase.rpc('finalize_payout', {
+            p_deal_id: deal.id,
+            p_new_payout_status: 'SUCCESS',
+            p_new_deal_status: 'COMPLETED',
+          })
+          if (finalizeError) throw finalizeError
+          if (!finalized?.success) return ok({ received: true, processed: false, reason: finalized?.error })
+        }
 
         await supabase.from('notifications').insert({
           user_id: deal.seller_id,
@@ -142,14 +153,23 @@ serve(async (req) => {
           deal_id: deal.id,
         })
       } else {
-        // Mark payout_status as FAILED (deal remains DELIVERED so it can be retried or resolved)
-        await supabase
-          .from('deals')
-          .update({
-            payout_status: 'FAILED',
-            updated_at: new Date().toISOString(),
+        if (merchantTransaction) {
+          const { data: finalized, error: finalizeError } = await supabase.rpc('finalize_merchant_payout', {
+            p_transaction_id: merchantTransaction.id,
+            p_payout_reference: reference,
+            p_new_payout_status: 'FAILED',
           })
-          .eq('id', deal.id)
+          if (finalizeError) throw finalizeError
+          if (!finalized?.success) return ok({ received: true, processed: false, reason: finalized?.error })
+        } else {
+          const { data: finalized, error: finalizeError } = await supabase.rpc('finalize_payout', {
+            p_deal_id: deal.id,
+            p_new_payout_status: 'FAILED',
+            p_new_deal_status: 'DELIVERED',
+          })
+          if (finalizeError) throw finalizeError
+          if (!finalized?.success) return ok({ received: true, processed: false, reason: finalized?.error })
+        }
 
         await supabase.from('notifications').insert([
           {
@@ -168,6 +188,14 @@ serve(async (req) => {
           },
         ])
       }
+
+      const { error: auditError } = await supabase.from('audit_logs').insert({
+        deal_id: deal.id,
+        action: providerAction,
+        actor_id: null,
+        details: { reference, event },
+      })
+      if (auditError) throw auditError
 
       return ok({ received: true, processed: true })
     }

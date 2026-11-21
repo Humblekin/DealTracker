@@ -649,3 +649,60 @@ describe('SECTION 5: Existing Workflows & Fee Engine Compatibility', () => {
     assert.equal(breakdown.sellerReceives, 497);
   });
 });
+
+describe('SECTION 6: Merchant API Key and Account Linking', () => {
+  test('6.1: API keys expire at their expiry time and invalid dates fail closed', async () => {
+    const { isApiKeyExpired } = await import('../supabase/functions/_shared/merchant-validation.ts');
+    const now = Date.parse('2026-11-21T00:00:00.000Z');
+
+    assert.equal(isApiKeyExpired(null, now), false);
+    assert.equal(isApiKeyExpired('2026-11-21T00:00:01.000Z', now), false);
+    assert.equal(isApiKeyExpired('2026-11-20T23:59:59.000Z', now), true);
+    assert.equal(isApiKeyExpired('not-a-timestamp', now), true);
+  });
+
+  test('6.2: Only a verified matching email can claim an unlinked merchant', async () => {
+    const { canClaimMerchantByEmail } = await import('../supabase/functions/_shared/merchant-validation.ts');
+    const claim = {
+      accountEmail: 'owner@example.com',
+      emailConfirmedAt: '2026-11-20T10:00:00.000Z',
+      submittedEmail: 'OWNER@example.com',
+      merchantUserId: null,
+      callerUserId: 'owner-1',
+    };
+
+    assert.equal(canClaimMerchantByEmail(claim), true);
+    assert.equal(canClaimMerchantByEmail({ ...claim, emailConfirmedAt: null }), false);
+    assert.equal(canClaimMerchantByEmail({ ...claim, submittedEmail: 'victim@example.com' }), false);
+    assert.equal(canClaimMerchantByEmail({ ...claim, merchantUserId: 'other-user' }), false);
+  });
+
+  test('6.3: API key operation scopes deny explicitly disabled capabilities', async () => {
+    const { isMerchantPermissionAllowed } = await import('../supabase/functions/_shared/merchant-validation.ts');
+
+    assert.equal(isMerchantPermissionAllowed({}, 'read_transactions'), false);
+    assert.equal(isMerchantPermissionAllowed({ release_funds: false }, 'release_funds'), false);
+    assert.equal(isMerchantPermissionAllowed({ release_funds: true }, 'release_funds'), true);
+  });
+
+  test('6.4: Payment redirects require HTTPS and an explicitly allowed origin', async () => {
+    const { isAllowedPaymentRedirect } = await import('../supabase/functions/_shared/redirect-validation.ts');
+    const origins = ['https://shop.example.com'];
+
+    assert.equal(isAllowedPaymentRedirect('https://shop.example.com/paid?order=1', origins), true);
+    assert.equal(isAllowedPaymentRedirect('http://shop.example.com/paid', origins), false);
+    assert.equal(isAllowedPaymentRedirect('https://attacker.example/paid', origins), false);
+    assert.equal(isAllowedPaymentRedirect('javascript:alert(1)', origins), false);
+  });
+
+  test('6.5: Webhook target validation rejects private and reserved IP ranges', async () => {
+    const { isPublicWebhookAddress } = await import('../supabase/functions/_shared/webhook-validation.ts');
+
+    assert.equal(isPublicWebhookAddress('8.8.8.8'), true);
+    assert.equal(isPublicWebhookAddress('10.0.0.2'), false);
+    assert.equal(isPublicWebhookAddress('169.254.169.254'), false);
+    assert.equal(isPublicWebhookAddress('192.168.1.2'), false);
+    assert.equal(isPublicWebhookAddress('2001:4860:4860::8888'), true);
+    assert.equal(isPublicWebhookAddress('2001:db8::1'), false);
+  });
+});

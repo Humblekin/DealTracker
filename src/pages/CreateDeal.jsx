@@ -45,7 +45,6 @@ export default function CreateDeal() {
 
       if (error) throw error;
 
-      await supabase.from('audit_logs').insert({ deal_id: data.id, action: 'DEAL_CREATED', actor_id: profile.id, details: { amount: formData.amount, creator_role: creatorRole } });
       toast.success('Deal contract created successfully');
       navigate(`/deals/${data.id}`);
     } catch (err) { console.error(err); toast.error('Failed to create deal. Please try again.'); }
@@ -70,6 +69,7 @@ export default function CreateDeal() {
                     type="button"
                     className={`role-btn ${creatorRole === 'BUYER' ? 'active' : ''}`}
                     onClick={() => setCreatorRole('BUYER')}
+                    aria-pressed={creatorRole === 'BUYER'}
                   >
                     <span className="role-icon"><ShoppingCart size={20} /></span>
                     <span className="role-label">Buyer</span>
@@ -79,6 +79,7 @@ export default function CreateDeal() {
                     type="button"
                     className={`role-btn ${creatorRole === 'SELLER' ? 'active' : ''}`}
                     onClick={() => setCreatorRole('SELLER')}
+                    aria-pressed={creatorRole === 'SELLER'}
                   >
                     <span className="role-icon"><Package size={20} /></span>
                     <span className="role-label">Seller</span>
@@ -90,22 +91,22 @@ export default function CreateDeal() {
               <div className="form-section">
                 <h3 className="section-title">Contract Details</h3>
                 <div className="form-group">
-                  <label className="form-label">Transaction Title</label>
-                  <input name="title" className="form-input form-input-lg" placeholder="e.g. Graphic Design Services" value={formData.title} onChange={handleChange} required maxLength={200} />
+                  <label className="form-label" htmlFor="deal-title">Transaction Title</label>
+                  <input id="deal-title" name="title" className="form-input form-input-lg" placeholder="e.g. Graphic Design Services" value={formData.title} onChange={handleChange} required maxLength={200} />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Terms & Description</label>
-                  <textarea name="description" className="form-textarea" placeholder="Clearly outline deliverables, timelines, and conditions for this transaction..." value={formData.description} onChange={handleChange} maxLength={5000} />
+                  <label className="form-label" htmlFor="deal-description">Terms & Description</label>
+                  <textarea id="deal-description" name="description" className="form-textarea" placeholder="Clearly outline deliverables, timelines, and conditions for this transaction..." value={formData.description} onChange={handleChange} maxLength={5000} />
                 </div>
               </div>
 
               <div className="form-section">
                 <h3 className="section-title">Financials</h3>
                 <div className="form-group">
-                  <label className="form-label">Principal Amount (GHS)</label>
+                  <label className="form-label" htmlFor="deal-amount">Principal Amount (GHS)</label>
                   <div className="amount-input-wrap">
                     <span className="currency-symbol">GH₵</span>
-                    <input name="amount" type="number" step="0.01" min="1" className="form-input amount-input" placeholder="0.00" value={formData.amount} onChange={handleChange} required />
+                    <input id="deal-amount" name="amount" type="number" step="0.01" min="1" className="form-input amount-input" placeholder="0.00" value={formData.amount} onChange={handleChange} required />
                   </div>
                 </div>
 

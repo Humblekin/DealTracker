@@ -44,7 +44,7 @@ export default function Navbar({ isAdminLayout = false, showSidebar = false, onT
   };
 
   return (
-    <nav className={`navbar ${isAdminLayout ? 'navbar-admin' : ''} ${showSidebar ? 'navbar-user-sidebar' : ''}`}>
+    <nav aria-label="Main" className={`navbar ${isAdminLayout ? 'navbar-admin' : ''} ${showSidebar ? 'navbar-user-sidebar' : ''}`}>
       <div className="navbar-inner container">
         {isAdminLayout && (
           <button
@@ -111,12 +111,19 @@ export default function Navbar({ isAdminLayout = false, showSidebar = false, onT
             <div className="navbar-right" style={{ marginLeft: 'auto' }}>
               <ThemeToggle />
               <div className="notif-bell-wrapper" ref={notifRef}>
-                <button className="notif-bell" onClick={() => setShowNotifs(!showNotifs)} aria-label="Notifications">
+                <button
+                  type="button"
+                  className="notif-bell"
+                  onClick={() => setShowNotifs(!showNotifs)}
+                  aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`}
+                  aria-expanded={showNotifs}
+                  aria-controls="notification-panel"
+                >
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
                   {unreadCount > 0 && <span className="notif-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>}
                 </button>
                 {showNotifs && (
-                  <div className="notif-dropdown">
+                  <div id="notification-panel" className="notif-dropdown" role="region" aria-label="Notifications">
                     <div className="notif-header">
                       <span>Notifications</span>
                       <span className="notif-count">{unreadCount} new</span>
@@ -124,11 +131,16 @@ export default function Navbar({ isAdminLayout = false, showSidebar = false, onT
                     <div className="notif-list">
                       {notifications.length === 0 && <div className="notif-empty">No notifications yet</div>}
                       {notifications.map(n => (
-                          <div key={n.id} className={`notif-item ${n.is_read ? '' : 'unread'}`} onClick={() => markRead(n.id)}>
+                        <button
+                          key={n.id}
+                          type="button"
+                          className={`notif-item ${n.is_read ? '' : 'unread'}`}
+                          onClick={() => markRead(n.id)}
+                        >
                           <div className="notif-title">{n.title}</div>
                           <div className="notif-msg">{n.message}</div>
                           <div className="notif-time">{new Date(n.created_at).toLocaleDateString('en-GH', { month: 'short', day: 'numeric' })}</div>
-                        </div>
+                        </button>
                       ))}
                     </div>
                   </div>

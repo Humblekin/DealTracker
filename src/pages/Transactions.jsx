@@ -45,7 +45,7 @@ export default function Transactions() {
       return () => { cancelled = true; };
     }
 
-    let query = supabase.from('deals').select('*, buyer_profile:profiles!buyer_id(full_name), seller_profile:profiles!seller_id(full_name)');
+    let query = supabase.from('deals').select('*');
     if (profile.role !== 'admin') {
       query = query.or(`buyer_id.eq.${profile.id},seller_id.eq.${profile.id}`);
     }

@@ -164,6 +164,23 @@ textarea:focus-visible {
   outline-offset: 3px;
 }
 
+.skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 1000;
+  transform: translateY(-160%);
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--bg-card-solid);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-md);
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
 html {
   font-size: 16px;
   scroll-behavior: smooth;
@@ -896,8 +913,10 @@ input, select, textarea {
   position: fixed;
   inset: 0;
   background: rgba(5, 7, 15, 0.7);
+  border: 0;
   z-index: 200;
   animation: fadeIn 0.15s ease;
+  cursor: pointer;
 }
 
 .drawer {
@@ -1044,6 +1063,17 @@ input, select, textarea {
   .drawer,
   .drawer-overlay {
     display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
 

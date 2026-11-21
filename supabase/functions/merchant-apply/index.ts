@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.106.2'
 import { corsHeaders, handleCors, methodNotAllowed } from '../_shared/cors.ts'
+import { canClaimMerchantByEmail } from '../_shared/merchant-validation.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -32,7 +33,7 @@ serve(async (req) => {
 
     const { name, email, platform_url, description } = await req.json()
 
-    if (!name || !email) {
+    if (typeof name !== 'string' || !name.trim() || typeof email !== 'string' || !email.trim()) {
       return new Response(JSON.stringify({ error: 'name and email are required' }), { status: 400, headers: cors })
     }
 
@@ -79,14 +80,45 @@ serve(async (req) => {
     }
 
     // Check by email and backfill user_id if missing
-    const { data: byEmail } = await supabase
+    const normalizedEmail = email.trim()
+    const { data: byEmail, error: byEmailError } = await supabase
       .from('merchants')
-      .select('id, status')
-      .eq('email', email)
+      .select('id, status, user_id')
+      .eq('email', normalizedEmail)
       .maybeSingle()
 
+    if (byEmailError) throw byEmailError
+
     if (byEmail) {
-      await supabase.from('merchants').update({ user_id: user.id }).eq('id', byEmail.id)
+      if (!canClaimMerchantByEmail({
+        accountEmail: user.email,
+        emailConfirmedAt: user.email_confirmed_at,
+        submittedEmail: normalizedEmail,
+        merchantUserId: byEmail.user_id,
+        callerUserId: user.id,
+      })) {
+        return new Response(JSON.stringify({
+          error: 'This merchant email must be verified and unclaimed before it can be linked.',
+        }), { status: 403, headers: cors })
+      }
+
+      if (!byEmail.user_id) {
+        const { data: linkedMerchant, error: linkError } = await supabase
+          .from('merchants')
+          .update({ user_id: user.id })
+          .eq('id', byEmail.id)
+          .is('user_id', null)
+          .select('id')
+          .maybeSingle()
+
+        if (linkError) throw linkError
+        if (!linkedMerchant) {
+          return new Response(JSON.stringify({
+            error: 'This merchant account has already been linked.',
+          }), { status: 409, headers: cors })
+        }
+      }
+
       return new Response(JSON.stringify({
         success: true,
         merchant_id: byEmail.id,

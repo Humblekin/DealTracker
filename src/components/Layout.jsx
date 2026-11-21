@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import Navbar from './Navbar';
 import AdminSidebar from './AdminSidebar';
@@ -19,6 +19,7 @@ export default function Layout() {
   if (showAdminSidebar) {
     return (
       <div className="admin-layout">
+        <a className="skip-link" href="#main-content">Skip to main content</a>
         {mobileSidebarOpen && (
           <button
             className="admin-sidebar-overlay"
@@ -35,7 +36,7 @@ export default function Layout() {
             isAdminLayout
             onOpenAdminMenu={() => setMobileSidebarOpen(true)}
           />
-          <main className="admin-content">
+          <main id="main-content" className="admin-content">
             <Outlet />
           </main>
         </div>
@@ -46,10 +47,11 @@ export default function Layout() {
   if (showUserSidebar) {
     return (
       <div className="user-layout">
+        <a className="skip-link" href="#main-content">Skip to main content</a>
         <UserSidebar mobileOpen={mobileSidebarOpen} />
         <div className="user-main-area">
           <Navbar showSidebar onToggleSidebar={() => setMobileSidebarOpen(!mobileSidebarOpen)} onOpenDrawer={() => setDrawerOpen(true)} />
-          <main className="user-content" onClick={() => { setMobileSidebarOpen(false); setDrawerOpen(false) }}>
+          <main id="main-content" className="user-content" onClick={() => { setMobileSidebarOpen(false); setDrawerOpen(false) }}>
             <Outlet />
           </main>
         </div>
@@ -61,8 +63,9 @@ export default function Layout() {
 
   return (
     <>
+      <a className="skip-link" href="#main-content">Skip to main content</a>
       <Navbar />
-      <main>
+      <main id="main-content">
         <Outlet />
       </main>
     </>
@@ -91,8 +94,8 @@ function MobileDrawer({ onClose }) {
 
   return (
     <>
-      <div className="drawer-overlay" onClick={onClose} />
-      <aside className="drawer">
+      <button type="button" className="drawer-overlay" aria-label="Close menu" onClick={onClose} />
+      <aside className="drawer" aria-label="Mobile navigation">
         <div className="drawer-header">
           <div className="drawer-brand">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
@@ -104,12 +107,12 @@ function MobileDrawer({ onClose }) {
           <button className="drawer-close" onClick={onClose} aria-label="Close menu">&times;</button>
         </div>
 
-        <nav className="drawer-nav">
+        <nav className="drawer-nav" aria-label="Account">
           {links.map(link => (
-            <a key={link.path} href={link.path} className={`drawer-link ${isActive(link.path) ? 'active' : ''}`} onClick={onClose}>
+            <Link key={link.path} to={link.path} className={`drawer-link ${isActive(link.path) ? 'active' : ''}`} onClick={onClose}>
               <span className="drawer-link-icon">{link.icon}</span>
               {link.label}
-            </a>
+            </Link>
           ))}
         </nav>
 

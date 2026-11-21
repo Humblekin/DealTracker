@@ -59,7 +59,7 @@ serve(async (req) => {
     // Validate deal exists and is in a payout-eligible state
     const { data: deal, error: dealError } = await supabase
       .from('deals')
-      .select('id, status, amount, net_amount, seller_id, buyer_id, title')
+      .select('id, status, amount, net_amount, seller_id, buyer_id, title, payout_status')
       .eq('id', deal_id)
       .single()
 
@@ -67,9 +67,9 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Deal not found' }), { status: 404, headers: cors })
     }
 
-    if (!['IN_ESCROW', 'DELIVERED', 'COMPLETED', 'DISPUTED'].includes(deal.status)) {
+    if (!['IN_ESCROW', 'DELIVERED', 'DISPUTED'].includes(deal.status)) {
       return new Response(JSON.stringify({
-        error: `Cannot pay out. Deal is in "${deal.status}" status. Expected IN_ESCROW, DELIVERED, COMPLETED, or DISPUTED.`,
+        error: `Cannot pay out. Deal is in "${deal.status}" status. Expected IN_ESCROW, DELIVERED, or DISPUTED.`,
       }), { status: 400, headers: cors })
     }
 
@@ -82,48 +82,45 @@ serve(async (req) => {
       }), { status: 400, headers: cors })
     }
 
-    // Prevent double payout: check both durable payout_status and audit_logs
-    if (deal.payout_status === 'SUCCESS' || deal.status === 'COMPLETED') {
-      return new Response(JSON.stringify({
-        error: 'A payout has already been completed for this deal (double payout prevented)',
-      }), { status: 409, headers: cors })
-    }
-
-    if (deal.payout_status === 'RESERVED' || deal.payout_status === 'PROCESSING') {
-      return new Response(JSON.stringify({
-        error: 'A payout is currently in progress for this deal',
-      }), { status: 409, headers: cors })
-    }
-
-    const { data: existingPayout } = await supabase
-      .from('audit_logs')
-      .select('id')
-      .eq('deal_id', deal_id)
-      .in('action', ['FUNDS_TRANSFERRED', 'PAYOUT_SENT', 'MERCHANT_FUNDS_RELEASED', 'PAYOUT_TRANSFER_SUCCESS'])
-      .limit(1)
-
-    if (existingPayout && existingPayout.length > 0) {
-      return new Response(JSON.stringify({
-        error: 'A payout has already been processed for this deal (double payout prevented)',
-      }), { status: 409, headers: cors })
-    }
-
     const reference = `PO-${deal_id}-${Date.now()}`
 
-    // Persist payout reference and status as PROCESSING before initiating HTTP call
-    await supabase.from('deals').update({
-      payout_reference: reference,
-      payout_status: 'PROCESSING',
-    }).eq('id', deal_id)
+    const { data: reservation, error: reservationError } = await supabase.rpc('reserve_admin_payout', {
+      p_deal_id: deal_id,
+      p_payout_reference: reference,
+    })
+    if (reservationError) throw reservationError
+    if (!reservation?.success) {
+      return new Response(JSON.stringify({ error: reservation?.error || 'Payout could not be reserved' }), {
+        status: 409,
+        headers: cors,
+      })
+    }
 
     // Create recipient and initiate the transfer
-    const recipient = await createTransferRecipient({
-      name: `DealGuider payout for ${deal_id}`,
-      phone,
-      network,
-    })
+    let recipient
+    try {
+      recipient = await createTransferRecipient({
+        name: `DealGuider payout for ${deal_id}`,
+        phone,
+        network,
+      })
+    } catch (error) {
+      const { error: finalizeError } = await supabase.rpc('finalize_payout', {
+        p_deal_id: deal_id,
+        p_new_payout_status: 'FAILED',
+        p_new_deal_status: deal.status,
+      })
+      if (finalizeError) throw finalizeError
+      throw error
+    }
 
     if (!recipient.success || !recipient.recipient_code) {
+      const { error: finalizeError } = await supabase.rpc('finalize_payout', {
+        p_deal_id: deal_id,
+        p_new_payout_status: 'FAILED',
+        p_new_deal_status: deal.status,
+      })
+      if (finalizeError) throw finalizeError
       await supabase.from('audit_logs').insert({
         deal_id,
         action: 'ADMIN_PAYOUT_FAILED',
@@ -133,15 +130,43 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: recipient.error }), { status: 502, headers: cors })
     }
 
-    const transfer = await initiateTransfer({
-      amount: validatedAmount,
-      recipientCode: recipient.recipient_code,
-      reason: narration || 'DealGuider payout',
-      reference,
-    })
+    let transfer
+    try {
+      transfer = await initiateTransfer({
+        amount: validatedAmount,
+        recipientCode: recipient.recipient_code,
+        reason: narration || 'DealGuider payout',
+        reference,
+      })
+    } catch (error) {
+      const { error: finalizeError } = await supabase.rpc('finalize_payout', {
+        p_deal_id: deal_id,
+        p_new_payout_status: 'PENDING_VERIFICATION',
+        p_new_deal_status: deal.status,
+      })
+      if (finalizeError) throw finalizeError
+      await supabase.from('audit_logs').insert({
+        deal_id,
+        action: 'ADMIN_PAYOUT_PENDING_VERIFICATION',
+        actor_id: user.id,
+        details: { reference, amount, phone, network },
+      })
+      console.error('[paystack-payout] Transfer initiation outcome is ambiguous:', error)
+      return new Response(JSON.stringify({
+        success: true,
+        payout_status: 'PENDING_VERIFICATION',
+        reference,
+        message: 'Transfer status is being verified. Do not retry this payout.',
+      }), { status: 202, headers: cors })
+    }
 
     if (!transfer.success) {
-      await supabase.from('deals').update({ payout_status: 'FAILED' }).eq('id', deal_id)
+      const { error: finalizeError } = await supabase.rpc('finalize_payout', {
+        p_deal_id: deal_id,
+        p_new_payout_status: 'FAILED',
+        p_new_deal_status: deal.status,
+      })
+      if (finalizeError) throw finalizeError
       await supabase.from('audit_logs').insert({
         deal_id,
         action: 'ADMIN_PAYOUT_FAILED',
@@ -152,10 +177,12 @@ serve(async (req) => {
     }
 
     const isDirectSuccess = transfer.status === 'success'
-    await supabase.from('deals').update({
-      status: isDirectSuccess ? 'COMPLETED' : deal.status,
-      payout_status: isDirectSuccess ? 'SUCCESS' : 'PROCESSING',
-    }).eq('id', deal_id)
+    const { error: finalizeError } = await supabase.rpc('finalize_payout', {
+      p_deal_id: deal_id,
+      p_new_payout_status: isDirectSuccess ? 'SUCCESS' : 'PROCESSING',
+      p_new_deal_status: deal.status,
+    })
+    if (finalizeError) throw finalizeError
 
     await supabase.from('disputes')
       .update({ status: 'RESOLVED', admin_decision: 'Released to seller' })
@@ -207,6 +234,7 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({
       success: true,
+      payout_status: isDirectSuccess ? 'SUCCESS' : 'PROCESSING',
       reference: transfer.reference || reference,
       transfer_code: transfer.transfer_code,
     }), { status: 200, headers: cors })

@@ -1,7 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.106.2'
 import { corsHeaders, handleCors, methodNotAllowed } from '../_shared/cors.ts'
-import { authenticateMerchant, AuthError } from '../_shared/merchant-auth.ts'
+import { authenticateMerchant, AuthError, requireMerchantPermission } from '../_shared/merchant-auth.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -22,6 +22,7 @@ serve(async (req) => {
     }
 
     const auth = await authenticateMerchant(apiKey)
+    requireMerchantPermission(auth, 'read_transactions')
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: { autoRefreshToken: false, persistSession: false },
     })

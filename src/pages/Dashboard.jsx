@@ -23,7 +23,7 @@ export default function Dashboard() {
     let cancelled = false;
 
     const loadDeals = () => {
-      let query = supabase.from('deals').select('*, buyer_profile:profiles!buyer_id(full_name), seller_profile:profiles!seller_id(full_name)');
+      let query = supabase.from('deals').select('*');
       if (profile.role !== 'admin') {
         query = query.or(`buyer_id.eq.${profile.id},seller_id.eq.${profile.id}`);
       }
@@ -153,15 +153,18 @@ export default function Dashboard() {
           {(!profile.phone || !profile.network || phone || network) && (
             <div className="payout-form">
               <div className="payout-row">
-                <select className="form-select payout-network" value={network} onChange={e => setNetwork(e.target.value)}>
+                <label className="sr-only" htmlFor="payout-network">Mobile money network</label>
+                <select id="payout-network" className="form-select payout-network" value={network} onChange={e => setNetwork(e.target.value)}>
                   <option value="">Select Network</option>
                   <option value="mtn">MTN Mobile Money</option>
                   <option value="vodafone">Telecel Cash</option>
                   <option value="tigo">AT Money</option>
                 </select>
                 <input
+                  id="payout-phone"
                   type="tel"
                   className="form-input payout-phone"
+                  aria-label="Mobile money phone number"
                   placeholder="Enter mobile number"
                   value={phone}
                   onChange={e => setPhone(e.target.value)}

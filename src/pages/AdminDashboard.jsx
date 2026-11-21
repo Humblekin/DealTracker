@@ -122,7 +122,9 @@ export default function AdminDashboard() {
       });
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error || 'Payout was not accepted.');
-      toast.success('Payout sent to seller via Paystack.');
+      toast.success(data.payout_status === 'SUCCESS'
+        ? 'Payout completed via Paystack.'
+        : 'Payout request accepted and is processing.');
       loadAll();
     } catch (err) {
       console.error(err);
@@ -136,13 +138,11 @@ export default function AdminDashboard() {
     if (!window.confirm(`Refund GH₵ ${parseFloat(deal?.amount || 0).toFixed(2)} to buyer? Only click OK if you have processed the refund.`)) return;
     setActionLoading(dealId);
     try {
-      await supabase.from('deals').update({ status: DEAL_STATUS.REFUNDED }).eq('id', dealId);
-      await supabase.from('disputes').update({ status: 'RESOLVED', admin_decision: 'Refunded to buyer' }).eq('deal_id', dealId).eq('status', 'OPEN');
-      await supabase.from('audit_logs').insert({ deal_id: dealId, action: 'ADMIN_MANUAL_REFUND', actor_id: profile.id, details: { note: 'Admin confirmed manual refund sent' } });
-      await supabase.from('notifications').insert([
-        { user_id: deal.buyer_id, title: 'Refund Sent!', message: `Funds for "${deal.title}" have been refunded.`, type: 'payment', deal_id: dealId },
-        { user_id: deal.seller_id, title: 'Deal Refunded', message: `"${deal.title}" was refunded to the buyer by admin.`, type: 'info', deal_id: dealId },
-      ]);
+      const { data, error } = await supabase.functions.invoke('admin-refund-deal', {
+        body: { deal_id: dealId, note: 'Admin confirmed manual refund sent' },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Refund was not processed.');
       toast.success('Buyer refunded and notified.');
       loadAll();
     } catch (err) { console.error(err); toast.error('Operation failed. Please try again.'); }
@@ -173,8 +173,6 @@ export default function AdminDashboard() {
     setEditForm({
       title: deal.title,
       description: deal.description || '',
-      amount: deal.amount,
-      status: deal.status,
     });
   }
 
@@ -760,14 +758,7 @@ export default function AdminDashboard() {
                     <textarea className="form-input" rows={3} value={editForm.description || ''} onChange={e => setEditForm({...editForm, description: e.target.value})} />
                   </div>
                   <div className="form-group">
-                    <label>Amount (GHS)</label>
-                    <input className="form-input" type="number" step="0.01" value={editForm.amount || ''} onChange={e => setEditForm({...editForm, amount: e.target.value})} />
-                  </div>
-                  <div className="form-group">
-                    <label>Status</label>
-                    <select className="form-input" value={editForm.status || ''} onChange={e => setEditForm({...editForm, status: e.target.value})}>
-                      {Object.entries(DEAL_STATUS).map(([key, val]) => <option key={key} value={val}>{key}</option>)}
-                    </select>
+                    <p className="text-muted">Financial terms and deal status are managed by protected workflows.</p>
                   </div>
                 </>
               ) : (

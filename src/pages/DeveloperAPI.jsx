@@ -5,6 +5,18 @@ import { CheckCircle, PartyPopper, XCircle, Clock, Key, RefreshCw, ClipboardList
 import toast from 'react-hot-toast';
 import './DeveloperAPI.css';
 
+const API_PERMISSION_OPTIONS = [
+  ['create_escrow', 'Create escrow'],
+  ['verify_payment', 'Verify payments'],
+  ['read_transactions', 'Read transaction details'],
+  ['confirm_shipment', 'Confirm shipment'],
+  ['release_funds', 'Release funds'],
+];
+
+const defaultKeyPermissions = () => Object.fromEntries(
+  API_PERMISSION_OPTIONS.map(([permission]) => [permission, true])
+);
+
 const endpoints = [
   {
     method: 'POST',
@@ -203,7 +215,11 @@ function DeveloperDashboard() {
   const [newKey, setNewKey] = useState(null)
   const [showKeyModal, setShowKeyModal] = useState(false)
   const [showNewKeyForm, setShowNewKeyForm] = useState(false)
-  const [keyForm, setKeyForm] = useState({ name: '', environment: 'test' })
+  const [keyForm, setKeyForm] = useState({
+    name: '',
+    environment: 'test',
+    permissions: defaultKeyPermissions(),
+  })
   const [refreshKey, setRefreshKey] = useState(0)
 
   useEffect(() => {
@@ -295,7 +311,7 @@ function DeveloperDashboard() {
       setNewKey(data)
       setShowKeyModal(true)
       setShowNewKeyForm(false)
-      setKeyForm({ name: '', environment: 'test' })
+      setKeyForm({ name: '', environment: 'test', permissions: defaultKeyPermissions() })
       loadKeys()
     } catch (err) {
       toast.error(err.message || 'Failed to generate API key.')
@@ -454,6 +470,24 @@ function DeveloperDashboard() {
                       <option value="live">Live</option>
                     </select>
                   </div>
+                  <fieldset className="form-group" style={{ flexBasis: '100%', border: 0, padding: 0, margin: '12px 0 0' }}>
+                    <legend className="form-label">API permissions</legend>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px' }}>
+                      {API_PERMISSION_OPTIONS.map(([permission, label]) => (
+                        <label key={permission} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                          <input
+                            type="checkbox"
+                            checked={keyForm.permissions[permission]}
+                            onChange={(event) => setKeyForm({
+                              ...keyForm,
+                              permissions: { ...keyForm.permissions, [permission]: event.target.checked },
+                            })}
+                          />
+                          {label}
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
                   <button className="btn btn-primary" type="submit" disabled={generating} style={{ marginBottom: 0 }}>
                     {generating ? 'Generating...' : 'Generate'}
                   </button>
@@ -481,6 +515,12 @@ function DeveloperDashboard() {
                     </div>
                     <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
                       <div><code style={{ fontSize: '0.78rem' }}>dg_{k.environment}_{k.key_prefix}_...</code></div>
+                      <div style={{ marginTop: 4 }}>
+                        Permissions: {API_PERMISSION_OPTIONS
+                          .filter(([permission]) => k.permissions?.[permission] !== false)
+                          .map(([, label]) => label)
+                          .join(', ') || 'None'}
+                      </div>
                       <div style={{ color: 'var(--text-muted)', marginTop: 4, fontSize: '0.78rem' }}>
                         Created: {new Date(k.created_at).toLocaleDateString()}
                         {k.last_used_at && <span> &middot; Last used: {new Date(k.last_used_at).toLocaleDateString()}</span>}

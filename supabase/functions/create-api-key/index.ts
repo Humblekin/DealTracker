@@ -54,6 +54,26 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'environment must be "test" or "live"' }), { status: 400, headers: cors })
     }
 
+    const allowedPermissions = [
+      'create_escrow',
+      'verify_payment',
+      'read_transactions',
+      'confirm_shipment',
+      'release_funds',
+    ]
+    if (
+      !permissions
+      || typeof permissions !== 'object'
+      || Array.isArray(permissions)
+      || Object.keys(permissions).some((permission) => !allowedPermissions.includes(permission))
+      || Object.values(permissions).some((enabled) => typeof enabled !== 'boolean')
+    ) {
+      return new Response(JSON.stringify({ error: 'permissions must contain only supported boolean scopes' }), { status: 400, headers: cors })
+    }
+    const normalizedPermissions = Object.fromEntries(
+      allowedPermissions.map((permission) => [permission, permissions[permission] !== false])
+    )
+
     const prefixBytes = crypto.getRandomValues(new Uint8Array(4))
     const prefix = Array.from(prefixBytes).map(b => b.toString(36).toLowerCase()).join('')
 
@@ -75,7 +95,7 @@ serve(async (req) => {
         environment,
         key_hash: keyHash,
         key_prefix: prefix,
-        permissions: typeof permissions === 'object' ? permissions : {},
+        permissions: normalizedPermissions,
         is_active: true,
         expires_at: null,
       })

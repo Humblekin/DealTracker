@@ -1,88 +1,98 @@
-# DealGuider (MVP)
+# DealGuider
 
-A trust-based escrow platform for safe peer-to-peer transactions in Ghana. Built with React (Vite), vanilla CSS, Supabase (Auth, PostgreSQL, Realtime), and **Paystack** for payments and payouts.
+**Escrow workflow for peer-to-peer commerce in Ghana.**
 
-## 🚀 Getting Started
+DealGuider is a React and Supabase application for buyers and sellers who need
+to agree on terms, fund a transaction, and track delivery before requesting
+payment release. Paystack handles checkout and transfer requests.
 
-### 1. Prerequisites
-- Node.js installed on your machine
-- A [Supabase](https://supabase.com/) account
-- A [Paystack](https://paystack.com/) account (Ghana merchant)
+## The problem and approach
 
-### 2. Environment Variables
-Create a `.env` file in the root of your project:
-```env
-VITE_SUPABASE_URL=your_supabase_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-VITE_PAYSTACK_PUBLIC_KEY=your_paystack_public_key
-```
+Peer-to-peer buyers and sellers often transact without a shared way to record
+terms or verify payment. DealGuider provides a shareable deal flow with
+participant roles, payment status, delivery confirmation, and dispute review.
+It is intended for Ghanaian buyers, sellers, and e-commerce merchants.
 
-### 3. Supabase Secrets (Edge Functions)
-Set these secrets for the Edge Functions:
+## Implemented workflows
+
+- Create a deal as the buyer or seller and invite the counterparty by link.
+- Join a deal, initialize Paystack checkout, and verify payment through a
+  signed webhook or server-side status check.
+- Track escrow, delivery, completion, payment failures, and disputes.
+- Configure seller mobile-money details and request a payout after delivery.
+- Admin review of deals, users, disputes, merchants, and payout operations.
+- Merchant API endpoints for escrow creation, payment verification, shipment,
+  release, and transaction lookup.
+
+The interface and configured API routes do not by themselves guarantee that
+Paystack transfers are enabled. Payout availability depends on the Paystack
+account's transfer permissions and provider response.
+
+## Demo assets
+
+No verified deployment URL, application screenshots, or demo-video link is
+currently included in this repository. Add only links and screenshots that
+represent the current application before submitting a demo.
+
+## Technology
+
+- React 19, React Router, Vite, and CSS
+- Supabase Auth, PostgreSQL, Realtime, and Edge Functions
+- Paystack checkout, transfer, and signed webhook integration
+- Node's built-in test runner, ESLint, and Vite production build
+
+## Repository map
+
+| Path | Purpose |
+|---|---|
+| `src/pages/` | Route-level UI |
+| `src/components/` | Shared UI |
+| `src/contexts/` and `src/hooks/` | Authentication, theme, and payment state |
+| `src/lib/` and `src/utils/` | Supabase/Paystack clients and frontend utilities |
+| `supabase/functions/` | Server-side consumer, admin, and merchant workflows |
+| `supabase/migrations/` | Incremental database changes |
+| `supabase_schema.sql` | SQL bootstrap schema |
+| `tests/` | Existing security and workflow tests |
+| `docs/` | Setup, architecture, accessibility, and audit notes |
+
+## Getting started
+
+See the detailed [local setup guide](docs/SETUP.md). In brief:
+
 ```bash
-supabase secrets set PAYSTACK_SECRET_KEY=sk_live_xxxxxxxxxxxx
-```
-
-### 4. Supabase Database Setup
-1. Go to your Supabase Dashboard → SQL Editor.
-2. Copy the contents of `supabase_schema.sql` and run it (fresh installs).
-3. For an existing database, run `supabase/migrations/20260812000000_paystack-migration.sql` to add the Paystack columns.
-
-### 5. Deploy Edge Functions
-```bash
-# Core escrow functions
-supabase functions deploy join-deal
-supabase functions deploy paystack-init-payment
-supabase functions deploy paystack-webhook
-supabase functions deploy paystack-verify
-supabase functions deploy confirm-delivery
-supabase functions deploy paystack-payout
-
-# Admin functions
-supabase functions deploy admin-delete-user
-supabase functions deploy admin-update-role
-
-# Merchant integration functions
-supabase functions deploy merchant-register
-supabase functions deploy merchant-apply
-supabase functions deploy merchant-check-status
-supabase functions deploy create-api-key
-supabase functions deploy merchant-list-keys
-supabase functions deploy merchant-disable-key
-supabase functions deploy merchant-create-escrow
-supabase functions deploy merchant-verify-payment
-supabase functions deploy merchant-confirm-shipment
-supabase functions deploy merchant-release-funds
-supabase functions deploy merchant-get-transaction
-```
-
-### 6. Configure the Paystack Webhook
-In the Paystack Dashboard → Settings → Webhooks, point the webhook URL to:
-```
-https://[PROJECT].supabase.co/functions/v1/paystack-webhook
-```
-(One webhook URL per environment — this single endpoint handles both consumer and merchant deals.)
-
-### 7. Running the App
-```bash
-npm install
+npm ci
+cp .env.example .env
 npm run dev
 ```
 
-## 🔐 Architecture
+In PowerShell, use `Copy-Item .env.example .env` for the copy step.
 
-```
-Buyer pays via Paystack (inline popup)
-  → Paystack calls paystack-webhook (HMAC-SHA512 verified)
-  → status = IN_ESCROW
-  → Buyer confirms delivery
-  → Edge Function triggers Paystack Transfer (mobile money)
-  → status = COMPLETED
+Set the public `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and
+`VITE_PAYSTACK_PUBLIC_KEY` values in `.env`. Never put a Supabase service-role
+key or Paystack secret key in a `VITE_` variable. Configure server-side secrets
+through Supabase.
+
+## Architecture
+
+The browser uses Supabase Auth and PostgREST for user-facing operations.
+Server-side Edge Functions validate the caller and use privileged credentials
+for payment, payout, and administrative operations. Paystack webhooks are
+signature-verified before processing.
+
+See [Architecture](docs/ARCHITECTURE.md) for the transaction lifecycle and
+trust boundaries.
+
+## Validation
+
+```bash
+npm run lint
+npm test
+npm run build
 ```
 
-**Supabase** = escrow brain (truth source)
-**Paystack** = money movement tool
-**Frontend** = interaction layer
+The GitHub Actions workflow runs these same commands on pushes and pull
+requests. Current tests include in-memory workflow models; they do not
+integration-test live Supabase policies or Paystack.
 
 ## Edge Functions
 
@@ -90,13 +100,15 @@ Buyer pays via Paystack (inline popup)
 |---|---|
 | `join-deal` | Counterparty joins a deal via share link, advances to AWAITING_PAYMENT |
 | `paystack-init-payment` | Initializes a Paystack checkout session, returns authorization URL + access code |
-| `paystack-webhook` | Single webhook endpoint: verifies signature, advances escrow on `charge.success`, records transfers |
+| `paystack-webhook` | Verifies the Paystack signature and processes payment and transfer events |
 | `paystack-verify` | Manual "check payment status" — queries Paystack and advances escrow if confirmed |
-| `confirm-delivery` | Buyer confirms delivery → triggers Paystack Transfer to seller → COMPLETED |
+| `confirm-delivery` | Buyer confirms delivery and initiates/reconciles the seller payout |
 | `paystack-payout` | Admin-only: manual payout trigger via Paystack Transfers |
 | `admin-delete-user` | Admin-only: delete a user account and cleanly cancel deals |
 | `admin-update-role` | Admin-only: securely assign or change user roles |
-| `merchant-apply` | Public: e-commerce platform submits application for API access (status=PENDING) |
+| `admin-refund-deal` | Admin-only: record a manually processed deal refund |
+| `deal-action` | Validates and applies participant cancellation/dispute actions |
+| `merchant-apply` | Authenticated user submits or updates a merchant application |
 | `merchant-check-status` | Authenticated merchant: check application/merchant status |
 | `create-api-key` | Admin/merchant: generate an API key for an ACTIVE merchant |
 | `merchant-list-keys` | Merchant: list their API keys |
@@ -108,29 +120,44 @@ Buyer pays via Paystack (inline popup)
 | `merchant-release-funds` | Triggers Paystack Transfer to merchant mobile money |
 | `merchant-get-transaction` | Returns full transaction details with timeline and audit logs |
 
-## 🔐 Security
-- **Edge Functions** authenticate users via Supabase Auth before any action
-- **Paystack webhook** verifies the `X-Paystack-Signature` header (HMAC-SHA512) before processing
-- **Merchant API** authenticates via SHA-256 hashed API keys (format: `dg_{environment}_{prefix}_{secret}`)
-- **RLS policies** protect all tables at the database level
-- **Immutable audit logs** — cannot be updated or deleted
-- **Service Role Key** is never exposed to the frontend
-- **Merchant webhooks** include HMAC-SHA256 signature in `X-DealGuider-Signature` header
-- **Idempotency** — merchant-create-escrow supports idempotency keys to prevent duplicate escrows
-- **Double payout prevention** — audit log check prevents releasing funds twice for the same deal
-- **Atomic transitions** — escrow state advances with conditional `.eq('status', …)` updates to prevent race conditions
+## Security and known limitations
+
+- The Supabase anon key is public; database policies are the security boundary.
+- Supabase service-role and Paystack secret keys must remain server-side.
+- Paystack webhook signatures are checked with HMAC-SHA512. Merchant outbound
+  callbacks are signed with HMAC-SHA256.
+- Merchant API keys are stored as SHA-256 hashes and returned only when created.
+- Merchant API-key operation scopes are checked server-side; create narrowly
+  scoped keys in the Developer API page.
+- Consumer, admin, and merchant payouts use atomic reservations in the current
+  source. Several security fixes require applying the latest reviewed Supabase
+  migration and deploying the changed Edge Functions before they protect a
+  live project.
+- The source audit documents high-priority database authorization and data
+  exposure risks in [REPOSITORY_AUDIT.md](docs/REPOSITORY_AUDIT.md). Do not
+  treat the presence of RLS alone as proof that all data access is safe.
+- Paystack Starter business accounts may be unable to initiate third-party
+  transfers. Contact Paystack to enable transfers before testing payouts.
+
+See [Accessibility](docs/ACCESSIBILITY.md) for current interface support and
+known gaps.
 
 ## 💰 Fee Engine
 `src/utils/fees.js` handles all fee calculations:
 - **Platform Fee**: 2% (min GHS 5, max GHS 50)
 - **Transfer Fee**: GHS 1–8 based on amount
 
-## 🧑‍💻 Admin Dashboard
-To access the Admin Dashboard:
-1. Create an account via Register.
-2. In Supabase Dashboard → Table Editor → `profiles` table.
-3. Change your user's `role` to `admin`.
-4. Refresh — you'll see Admin Panel in navigation.
+## Admin access
+
+Admin access is assigned to trusted accounts by an authorized administrator.
+Never grant roles through signup metadata or expose a role-management operation
+to an untrusted client.
+
+## Licensing and credits
+
+No project license or team-credit list is currently included. Confirm the
+project's ownership and licensing choice, and add verified contributor credits
+before public distribution.
 
 ---
 

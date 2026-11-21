@@ -82,15 +82,22 @@ export default function DealDetails() {
   const [showDisputeForm, setShowDisputeForm] = useState(false);
   const [deliveryConfirmed, setDeliveryConfirmed] = useState(false);
   const [statusCelebration, setStatusCelebration] = useState(null);
+  const [qrVisible, setQrVisible] = useState(false);
   const dealSnapshotRef = useRef(null);
   const { paying, checking, startPayment, checkPayment } = usePaystackPayment();
 
   const fetchDeal = useCallback(async () => {
     try {
       const { data, error } = await supabase.from('deals')
-        .select('*, buyer_profile:profiles!buyer_id(full_name, email), seller_profile:profiles!seller_id(full_name, email), payments(*), disputes(*)')
+        .select('*, payments(*), disputes(*)')
         .eq('id', id).single();
       if (error) throw error;
+      const { data: partyNames, error: partyNamesError } = await supabase.rpc('get_deal_party_names', {
+        p_deal_id: data.id,
+      });
+      if (partyNamesError) throw partyNamesError;
+      data.buyer_profile = partyNames?.buyer_name ? { full_name: partyNames.buyer_name } : null;
+      data.seller_profile = partyNames?.seller_name ? { full_name: partyNames.seller_name } : null;
       setDeal(data);
 
       const { data: logs } = await supabase.from('audit_logs')
@@ -241,9 +248,11 @@ export default function DealDetails() {
     if (!disputeReason.trim()) { toast.error('Please provide a reason'); return; }
     setActionLoading(true);
     try {
-      await supabase.from('disputes').insert({ deal_id: deal.id, reason: disputeReason, opened_by: profile.id, status: 'OPEN' });
-      await supabase.from('deals').update({ status: DEAL_STATUS.DISPUTED }).eq('id', deal.id);
-      await supabase.from('audit_logs').insert({ deal_id: deal.id, action: 'DISPUTE_OPENED', actor_id: profile.id, details: { reason: disputeReason } });
+      const { data, error } = await supabase.functions.invoke('deal-action', {
+        body: { deal_id: deal.id, action: 'dispute', reason: disputeReason },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Failed to open dispute.');
       toast.success('Dispute opened. Admin will review.');
       setShowDisputeForm(false);
       fetchDeal();
@@ -255,9 +264,11 @@ export default function DealDetails() {
     if (!window.confirm('Cancel this deal? This cannot be undone.')) return;
     setActionLoading(true);
     try {
-      const { error } = await supabase.from('deals').update({ status: DEAL_STATUS.CANCELLED }).eq('id', deal.id);
+      const { data, error } = await supabase.functions.invoke('deal-action', {
+        body: { deal_id: deal.id, action: 'cancel' },
+      });
       if (error) throw error;
-      await supabase.from('audit_logs').insert({ deal_id: deal.id, action: 'DEAL_CANCELLED', actor_id: profile.id, details: {} });
+      if (!data?.success) throw new Error(data?.error || 'Failed to cancel deal.');
       toast.success('Deal cancelled.');
       fetchDeal();
     } catch (err) { console.error(err); toast.error('Failed to cancel deal.'); }
@@ -335,15 +346,23 @@ export default function DealDetails() {
                 <h3 className="detail-section-title">Share Deal</h3>
                 <p className="share-hint">Share this link with a {joinRole.toLowerCase()} to let them join the escrow.</p>
                 <div className="share-link-row">
-                  <input className="form-input" value={shareUrl} readOnly onClick={e => e.target.select()} />
-                  <button className="btn btn-primary btn-sm" onClick={copyShareLink}>Copy</button>
+                  <input className="form-input" value={shareUrl} aria-label="Deal share link" readOnly onClick={e => e.target.select()} />
+                  <button type="button" className="btn btn-primary btn-sm" onClick={copyShareLink}>Copy</button>
                 </div>
                 <div className="share-buttons">
                   <a className="btn btn-sm btn-share" href={`https://wa.me/?text=${encodeURIComponent(shareUrl)}`} target="_blank" rel="noopener noreferrer">WhatsApp</a>
                   <a className="btn btn-sm btn-share" href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`} target="_blank" rel="noopener noreferrer">Facebook</a>
-                  <button className="btn btn-sm btn-share" onClick={() => document.getElementById('qr-section').classList.toggle('visible')}>QR Code</button>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-share"
+                    onClick={() => setQrVisible((visible) => !visible)}
+                    aria-expanded={qrVisible}
+                    aria-controls="qr-section"
+                  >
+                    QR Code
+                  </button>
                 </div>
-                <div id="qr-section" className="qr-section">
+                <div id="qr-section" className={`qr-section ${qrVisible ? 'visible' : ''}`} aria-hidden={!qrVisible}>
                   <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(shareUrl)}`} alt="QR Code" />
                 </div>
               </div>
@@ -577,15 +596,15 @@ export default function DealDetails() {
 
         {showDisputeForm && (
           <div className="modal-overlay" onClick={() => setShowDisputeForm(false)}>
-            <div className="modal-content" onClick={e => e.stopPropagation()}>
+          <div className="modal-content" role="dialog" aria-modal="true" aria-labelledby="dispute-dialog-title" onClick={e => e.stopPropagation()}>
               <div className="modal-header">
-                <h2>Initiate Arbitration</h2>
-                <button className="modal-close" onClick={() => setShowDisputeForm(false)}>×</button>
+              <h2 id="dispute-dialog-title">Initiate Arbitration</h2>
+              <button type="button" className="modal-close" aria-label="Close dispute form" onClick={() => setShowDisputeForm(false)}>×</button>
               </div>
               <form onSubmit={handleOpenDispute}>
                 <div className="form-group">
-                  <label className="form-label">Nature of Dispute</label>
-                  <textarea className="form-textarea" value={disputeReason} onChange={e => setDisputeReason(e.target.value)} placeholder="Provide detailed evidence and context for the administrators..." required rows="5" />
+                <label className="form-label" htmlFor="dispute-reason">Nature of Dispute</label>
+                <textarea id="dispute-reason" className="form-textarea" value={disputeReason} onChange={e => setDisputeReason(e.target.value)} placeholder="Provide detailed evidence and context for the administrators..." required rows="5" />
                 </div>
                 <button type="submit" className="btn btn-danger btn-full btn-lg mt-4" disabled={actionLoading}>
                   {actionLoading ? <><span className="spinner spinner-sm"></span>Submitting...</> : 'Submit to Administration'}
