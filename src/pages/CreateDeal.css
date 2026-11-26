@@ -284,3 +284,481 @@
   color: var(--text-muted);
   margin-top: 8px;
 }
+
+/* Keep the complete deal form in view on tablet and desktop layouts. */
+.create-deal-page {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(var(--nav-height) + 12px) 16px 16px;
+}
+
+.create-deal-page .container-md {
+  max-width: 960px;
+}
+
+.create-deal-page .page-header {
+  margin-bottom: 14px;
+}
+
+.create-deal-page .page-header h1 {
+  font-size: 1.55rem;
+  margin-bottom: 3px;
+}
+
+.create-deal-page .page-header p {
+  font-size: 0.84rem;
+}
+
+.create-deal-layout {
+  width: 100%;
+}
+
+.create-deal-layout > .glass-card {
+  padding: 18px 22px;
+}
+
+.deal-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(260px, 0.85fr);
+  grid-template-areas:
+    "role financials"
+    "details financials"
+    "submit submit"
+    "note note";
+  align-items: start;
+  gap: 12px 20px;
+}
+
+.form-section-role {
+  grid-area: role;
+}
+
+.form-section-details {
+  grid-area: details;
+}
+
+.form-section-financials {
+  grid-area: financials;
+}
+
+.deal-form > .create-btn {
+  grid-area: submit;
+  min-height: 44px;
+  margin-top: 0;
+  padding: 10px 16px;
+  font-size: 0.92rem;
+}
+
+.deal-form > .create-deal-note {
+  grid-area: note;
+  margin: -4px 0 0;
+  font-size: 0.72rem;
+  line-height: 1.3;
+}
+
+.deal-form .form-section {
+  gap: 8px;
+}
+
+.deal-form .section-title {
+  margin: 0;
+  padding-bottom: 6px;
+  font-size: 0.88rem;
+}
+
+.deal-form .form-group {
+  margin-bottom: 0;
+}
+
+.deal-form .form-label {
+  margin-bottom: 4px;
+  font-size: 0.7rem;
+}
+
+.deal-form .form-input-lg {
+  height: 42px;
+  padding: 10px 12px;
+  font-size: 0.92rem;
+}
+
+.deal-form .form-textarea {
+  height: 66px;
+  min-height: 66px;
+  padding: 9px 12px;
+  resize: none;
+  font-size: 0.88rem;
+}
+
+.deal-form .role-toggle {
+  gap: 8px;
+}
+
+.deal-form .role-btn {
+  min-height: 76px;
+  gap: 5px;
+  padding: 10px 8px;
+}
+
+.deal-form .role-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.deal-form .role-label {
+  font-size: 0.98rem;
+}
+
+.deal-form .role-desc {
+  font-size: 0.68rem;
+}
+
+.deal-form .amount-input {
+  height: 42px;
+  font-size: 1.05rem;
+}
+
+.deal-form .fee-preview {
+  margin-top: 8px;
+  padding: 10px;
+}
+
+.deal-form .fee-preview-title {
+  margin-bottom: 6px;
+  font-size: 0.68rem;
+}
+
+.deal-form .fee-breakdown {
+  padding: 8px 10px;
+}
+
+.deal-form .fee-row,
+.deal-form .fee-row.sub {
+  padding: 3px 0;
+}
+
+.deal-form .fee-label,
+.deal-form .fee-value {
+  font-size: 0.75rem;
+}
+
+.deal-form .fee-divider {
+  margin: 4px 0;
+}
+
+@media (max-width: 768px) {
+  .create-deal-page {
+    padding: calc(var(--nav-height) + 8px) 0 calc(var(--bottom-nav-height) + var(--safe-bottom) + 8px);
+  }
+
+  .create-deal-page .container-md {
+    padding: 0 12px;
+  }
+
+  .create-deal-page .page-header {
+    margin-bottom: 10px;
+  }
+
+  .create-deal-page .page-header h1 {
+    font-size: 1.35rem;
+  }
+
+  .create-deal-page .page-header p {
+    font-size: 0.78rem;
+  }
+
+  .create-deal-layout > .glass-card {
+    padding: 14px;
+  }
+
+  .deal-form {
+    grid-template-columns: minmax(0, 1.1fr) minmax(230px, 0.9fr);
+    gap: 10px 12px;
+  }
+
+  .deal-form .role-toggle {
+    gap: 6px;
+  }
+
+  .deal-form .role-btn {
+    min-height: 70px;
+    padding: 8px 6px;
+  }
+
+  .deal-form .role-label {
+    font-size: 0.88rem;
+  }
+
+  .deal-form .role-desc {
+    font-size: 0.64rem;
+    line-height: 1.2;
+  }
+
+  .deal-form > .create-deal-note {
+    font-size: 0.68rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .create-deal-page {
+    align-items: center;
+  }
+
+  .deal-form {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0.95fr);
+    grid-template-areas:
+      "role financials"
+      "details details"
+      "submit"
+      "note";
+  }
+
+  .deal-form .role-toggle {
+    gap: 5px;
+  }
+
+  .deal-form .role-btn {
+    min-height: 66px;
+    padding: 6px 4px;
+  }
+
+  .deal-form .role-desc {
+    font-size: 0.58rem;
+  }
+
+  .deal-form .form-textarea {
+    height: 56px;
+    min-height: 56px;
+  }
+
+  .deal-form .fee-preview {
+    padding: 6px;
+  }
+
+  .deal-form .fee-breakdown {
+    padding: 4px 5px;
+  }
+
+  .deal-form .fee-row,
+  .deal-form .fee-row.sub {
+    padding: 2px 0;
+  }
+
+  .deal-form .fee-label,
+  .deal-form .fee-value {
+    font-size: 0.65rem;
+  }
+
+  .deal-form .fee-preview .fee-row.sub:nth-child(2) {
+    display: none;
+  }
+
+  .deal-form > .create-deal-note {
+    display: none;
+  }
+}
+
+@media (max-height: 700px) and (min-width: 561px) {
+  .create-deal-page {
+    padding-top: calc(var(--nav-height) + 5px);
+    padding-bottom: calc(var(--bottom-nav-height) + var(--safe-bottom) + 5px);
+  }
+
+  .create-deal-page .page-header {
+    margin-bottom: 7px;
+  }
+
+  .create-deal-page .page-header h1 {
+    font-size: 1.18rem;
+  }
+
+  .create-deal-page .page-header p {
+    font-size: 0.72rem;
+  }
+
+  .create-deal-layout > .glass-card {
+    padding: 10px 14px;
+  }
+
+  .deal-form {
+    gap: 6px 12px;
+  }
+
+  .deal-form .form-section {
+    gap: 5px;
+  }
+
+  .deal-form .section-title {
+    padding-bottom: 4px;
+    font-size: 0.8rem;
+  }
+
+  .deal-form .role-btn {
+    min-height: 58px;
+    padding: 5px;
+    gap: 3px;
+  }
+
+  .deal-form .role-icon svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  .deal-form .role-label {
+    font-size: 0.82rem;
+  }
+
+  .deal-form .role-desc {
+    font-size: 0.6rem;
+  }
+
+  .deal-form .form-label {
+    font-size: 0.64rem;
+  }
+
+  .deal-form .form-input-lg,
+  .deal-form .amount-input {
+    height: 36px;
+    min-height: 36px;
+    padding-top: 7px;
+    padding-bottom: 7px;
+  }
+
+  .deal-form .form-textarea {
+    height: 52px;
+    min-height: 52px;
+    padding-top: 7px;
+    padding-bottom: 7px;
+  }
+
+  .deal-form .fee-preview {
+    margin-top: 5px;
+    padding: 6px;
+  }
+
+  .deal-form .fee-breakdown {
+    padding: 5px 7px;
+  }
+
+  .deal-form .fee-row,
+  .deal-form .fee-row.sub {
+    padding: 1px 0;
+  }
+
+  .deal-form .fee-label,
+  .deal-form .fee-value {
+    font-size: 0.68rem;
+  }
+
+  .deal-form > .create-btn {
+    min-height: 38px;
+    padding: 7px 12px;
+    font-size: 0.82rem;
+  }
+
+  .deal-form > .create-deal-note {
+    display: none;
+  }
+}
+
+@media (max-height: 700px) and (max-width: 560px) {
+  .create-deal-page {
+    align-items: center;
+    padding-top: calc(var(--nav-height) + var(--safe-top));
+    padding-bottom: calc(var(--bottom-nav-height) + var(--safe-bottom));
+  }
+
+  .create-deal-page .page-header {
+    margin-bottom: 4px;
+  }
+
+  .create-deal-page .page-header h1 {
+    font-size: 1.05rem;
+  }
+
+  .create-deal-page .page-header p {
+    display: none;
+  }
+
+  .create-deal-layout > .glass-card {
+    padding: 6px;
+  }
+
+  .deal-form {
+    gap: 4px 8px;
+  }
+
+  .deal-form .form-section {
+    gap: 4px;
+  }
+
+  .deal-form .section-title {
+    padding-bottom: 3px;
+    font-size: 0.74rem;
+  }
+
+  .deal-form .role-btn {
+    min-height: 54px;
+    padding: 4px 3px;
+    gap: 2px;
+  }
+
+  .deal-form .role-icon svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .deal-form .role-label {
+    font-size: 0.76rem;
+  }
+
+  .deal-form .role-desc {
+    font-size: 0.54rem;
+  }
+
+  .deal-form .form-label {
+    margin-bottom: 2px;
+    font-size: 0.6rem;
+  }
+
+  .deal-form .form-input-lg,
+  .deal-form .amount-input {
+    height: 34px;
+    min-height: 34px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+
+  .deal-form .form-textarea {
+    height: 44px;
+    min-height: 44px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+  }
+
+  .deal-form .fee-preview-title {
+    margin-bottom: 3px;
+    font-size: 0.62rem;
+  }
+
+  .deal-form .fee-preview .fee-row,
+  .deal-form .fee-preview .fee-row.sub {
+    padding: 1px 0;
+  }
+
+  .deal-form .fee-preview .fee-label,
+  .deal-form .fee-preview .fee-value {
+    font-size: 0.6rem;
+  }
+
+  .deal-form .fee-divider {
+    margin: 2px 0;
+  }
+
+  .deal-form > .create-btn {
+    min-height: 34px;
+    padding: 5px 10px;
+    font-size: 0.76rem;
+  }
+}

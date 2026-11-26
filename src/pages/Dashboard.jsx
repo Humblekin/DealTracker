@@ -187,7 +187,7 @@ export default function Dashboard() {
           
           {deals.length === 0 ? (
             <div className="empty-state glass-card">
-              <DealGuiderMascot variant="empty-dashboard" size="lg" alt="Kofi welcoming you to DealGuider" />
+              <DealGuiderMascot variant="empty-dashboard" size="xl" alt="Kofi welcoming you to DealGuider" />
               <h3 style={{ marginTop: '16px' }}>Welcome to DealGuider!</h3>
               <p>You haven't participated in any transactions yet. Ready to buy or sell with 100% escrow protection?</p>
               {profile?.role !== 'admin' && (

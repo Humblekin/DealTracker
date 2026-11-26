@@ -1,0 +1,326 @@
+/* ===== LinkGuard Verification Page ===== */
+.linkguard-page {
+  background: var(--bg-primary);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(var(--nav-height) + var(--safe-top) + 32px) 16px calc(40px + var(--safe-bottom));
+}
+
+.linkguard-container {
+  max-width: 460px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.linkguard-card {
+  padding: 36px 32px 36px;
+  text-align: center;
+}
+
+/* DealGuider brand header */
+.linkguard-brand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 24px;
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+}
+
+.linkguard-brand-logo {
+  display: flex;
+  align-items: center;
+}
+
+.linkguard-brand-text {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.linkguard-brand-text strong {
+  color: var(--accent-primary);
+}
+
+/* Shield icon area */
+.linkguard-shield {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  margin-bottom: 24px;
+  position: relative;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.linkguard-shield-verifying {
+  background: rgba(99, 102, 241, 0.1);
+  border: 2px solid rgba(99, 102, 241, 0.25);
+  color: #818cf8;
+  animation: linkguardPulse 2s ease-in-out infinite;
+}
+
+.linkguard-shield-verified {
+  background: rgba(16, 185, 129, 0.1);
+  border: 2px solid rgba(16, 185, 129, 0.3);
+  color: #10b981;
+  animation: linkguardVerified 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.linkguard-shield-warning {
+  background: rgba(239, 68, 68, 0.1);
+  border: 2px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+  animation: linkguardShake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) forwards;
+}
+
+.linkguard-shield-expired {
+  background: rgba(245, 158, 11, 0.1);
+  border: 2px solid rgba(245, 158, 11, 0.3);
+  color: #f59e0b;
+}
+
+.linkguard-shield-info {
+  background: rgba(59, 130, 246, 0.1);
+  border: 2px solid rgba(59, 130, 246, 0.25);
+  color: #3b82f6;
+}
+
+/* Status label */
+.linkguard-status-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 16px;
+}
+
+.linkguard-label-verifying {
+  background: rgba(99, 102, 241, 0.12);
+  color: #818cf8;
+}
+
+.linkguard-label-verified {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+}
+
+.linkguard-label-warning {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+}
+
+.linkguard-label-expired {
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+}
+
+.linkguard-label-info {
+  background: rgba(59, 130, 246, 0.12);
+  color: #3b82f6;
+}
+
+/* Title */
+.linkguard-title {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--text-heading);
+  margin-bottom: 10px;
+  line-height: 1.3;
+}
+
+/* Message */
+.linkguard-message {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 28px;
+  max-width: 380px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Deal preview card (shown only on verified) */
+.linkguard-preview {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  margin-bottom: 24px;
+  text-align: left;
+}
+
+.linkguard-preview-title {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-heading);
+  margin-bottom: 8px;
+  line-height: 1.3;
+}
+
+.linkguard-preview-amount {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--accent-primary);
+  margin-bottom: 4px;
+}
+
+.linkguard-preview-status {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+
+/* Action buttons */
+.linkguard-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Progress dots (verifying state) */
+.linkguard-dots {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.linkguard-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(99, 102, 241, 0.3);
+  animation: linkguardDot 1.4s ease-in-out infinite;
+}
+
+.linkguard-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.linkguard-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+/* Warning box */
+.linkguard-warning-box {
+  background: rgba(239, 68, 68, 0.06);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  margin-bottom: 24px;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  text-align: left;
+}
+
+.linkguard-warning-box strong {
+  color: var(--color-danger);
+}
+
+/* Footer branding */
+.linkguard-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 20px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.linkguard-footer-icon {
+  display: flex;
+  align-items: center;
+  color: var(--accent-primary);
+}
+
+/* Animations */
+@keyframes linkguardPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.2);
+  }
+  50% {
+    transform: scale(1.04);
+    box-shadow: 0 0 0 12px rgba(99, 102, 241, 0);
+  }
+}
+
+@keyframes linkguardVerified {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes linkguardShake {
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-6px); }
+  30% { transform: translateX(5px); }
+  45% { transform: translateX(-4px); }
+  60% { transform: translateX(3px); }
+  75% { transform: translateX(-1px); }
+}
+
+@keyframes linkguardDot {
+  0%, 80%, 100% {
+    transform: scale(0.6);
+    background: rgba(99, 102, 241, 0.2);
+  }
+  40% {
+    transform: scale(1);
+    background: rgba(99, 102, 241, 0.7);
+  }
+}
+
+/* Accessibility: respects reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .linkguard-shield-verifying,
+  .linkguard-shield-verified,
+  .linkguard-shield-warning,
+  .linkguard-dot {
+    animation: none !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .linkguard-card {
+    padding: 32px 20px 28px;
+  }
+
+  .linkguard-title {
+    font-size: 1.15rem;
+  }
+
+  .linkguard-shield {
+    width: 68px;
+    height: 68px;
+  }
+}

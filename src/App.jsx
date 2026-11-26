@@ -13,6 +13,7 @@ import Dashboard from './pages/Dashboard';
 const CreateDeal = lazy(() => import('./pages/CreateDeal'));
 const DealDetails = lazy(() => import('./pages/DealDetails'));
 const SharedDeal = lazy(() => import('./pages/SharedDeal'));
+const LinkGuard = lazy(() => import('./pages/LinkGuard'));
 const Transactions = lazy(() => import('./pages/Transactions'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const DeveloperAPI = lazy(() => import('./pages/DeveloperAPI'));
@@ -51,7 +52,8 @@ export default function App() {
                 <Route path="/" element={<Landing />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
-                <Route path="/deal/:shareToken" element={<SharedDeal />} />
+                <Route path="/deal/:shareToken" element={<LinkGuard />} />
+                <Route path="/deal/:shareToken/view" element={<SharedDeal />} />
                 <Route path="/developer" element={<DeveloperAPI />} />
                 <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                 <Route path="/deals/create" element={<ProtectedRoute><CreateDeal /></ProtectedRoute>} />

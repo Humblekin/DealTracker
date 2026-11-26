@@ -9,6 +9,7 @@ import { DEAL_STATUS, PAYMENT_STATUS, getCounterpartyRoleLabel } from '../utils/
 import { usePaystackPayment } from '../hooks/usePaystackPayment';
 import { Info, Link, CreditCard, CheckCircle, Clock, X } from 'lucide-react';
 import toast from 'react-hot-toast';
+import QRCode from 'qrcode';
 import DealGuiderMascot from '../components/DealGuiderMascot';
 import './DealDetails.css';
 
@@ -83,6 +84,7 @@ export default function DealDetails() {
   const [deliveryConfirmed, setDeliveryConfirmed] = useState(false);
   const [statusCelebration, setStatusCelebration] = useState(null);
   const [qrVisible, setQrVisible] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState('');
   const dealSnapshotRef = useRef(null);
   const { paying, checking, startPayment, checkPayment } = usePaystackPayment();
 
@@ -158,7 +160,18 @@ export default function DealDetails() {
     };
   }, [fetchDeal, id]);
 
-  const shareUrl = deal?.share_token ? `${window.location.origin}/deal/${deal.share_token}` : '';
+  const shareOrigin = (import.meta.env.VITE_APP_URL || window.location.origin).replace(/\/$/, '');
+  const shareUrl = deal?.share_token ? `${shareOrigin}/deal/${deal.share_token}` : '';
+
+  // Generate QR code locally so the secret share_token is never sent to a third-party QR API
+  useEffect(() => {
+    if (!qrVisible || !shareUrl) return;
+    let active = true;
+    QRCode.toDataURL(shareUrl, { width: 200, margin: 2 })
+      .then((url) => { if (active) setQrDataUrl(url); })
+      .catch((err) => console.error('Failed to generate QR code:', err));
+    return () => { active = false; };
+  }, [qrVisible, shareUrl]);
 
   async function copyShareLink() {
     try {
@@ -363,7 +376,7 @@ export default function DealDetails() {
                   </button>
                 </div>
                 <div id="qr-section" className={`qr-section ${qrVisible ? 'visible' : ''}`} aria-hidden={!qrVisible}>
-                  <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(shareUrl)}`} alt="QR Code" />
+                  {qrDataUrl && <img src={qrDataUrl} alt="QR Code" />}
                 </div>
               </div>
             )}
@@ -411,7 +424,8 @@ export default function DealDetails() {
               {deal.status === DEAL_STATUS.AWAITING_PAYMENT && isBuyer && canRetryPayment && (
                 <div className="action-wrapper">
                   {deal.payment_status && [PAYMENT_STATUS.FAILED, PAYMENT_STATUS.ABANDONED, PAYMENT_STATUS.REVERSED].includes(deal.payment_status) ? (
-                    <div className="status-notice notice-danger" style={{ marginBottom: '16px' }}>
+                    <div className="status-notice notice-danger deal-mascot-status-card" style={{ marginBottom: '16px' }}>
+                      <DealGuiderMascot variant="payment-failed" size="md" alt="Kofi holding a payment receipt indicating an issue" />
                       <div className="notice-content">
                         <h4>Payment Not Completed</h4>
                         <p>The previous payment was {deal.payment_status.toLowerCase()}. Your funds are safe—you can retry securely below.</p>
@@ -431,7 +445,8 @@ export default function DealDetails() {
 
               {deal.status === DEAL_STATUS.AWAITING_PAYMENT && isBuyer && deal.payment_reference && !canRetryPayment && (
                 <div className="action-wrapper">
-                  <div className="status-notice notice-warning" style={{marginBottom: '12px'}}>
+                  <div className="status-notice notice-warning deal-mascot-status-card" style={{marginBottom: '12px'}}>
+                    <DealGuiderMascot variant="processing" size="md" alt="Kofi verifying payment status" />
                     <div className="notice-content">
                       <h4>Payment {deal.payment_status === PAYMENT_STATUS.SUCCESS ? 'Confirmed' : 'Processing'}</h4>
                       <p>Your payment is being confirmed. Click the button below to check the status again.</p>
@@ -474,7 +489,8 @@ export default function DealDetails() {
               )}
 
               {deal.status === DEAL_STATUS.IN_ESCROW && isBuyer && deliveryConfirmed && (
-                <div className="status-notice notice-info">
+                <div className="status-notice notice-info deal-mascot-status-card">
+                  <DealGuiderMascot variant="processing" size="md" alt="Kofi processing payout after delivery confirmation" />
                   <div className="notice-content">
                     <h4>Delivery Confirmed</h4>
                     <p>Payout is being processed and sent to the seller.</p>
@@ -483,7 +499,8 @@ export default function DealDetails() {
               )}
 
               {deal.status === DEAL_STATUS.IN_ESCROW && isSeller && !deliveryConfirmed && (
-                <div className="status-notice notice-warning">
+                <div className="status-notice notice-warning deal-mascot-status-card">
+                  <DealGuiderMascot variant="processing" size="md" alt="Kofi holding escrow protection shield" />
                   <div className="notice-content">
                     <h4>Escrow Funded</h4>
                     <p>Funds are secured in escrow. Fulfill the contract and wait for the buyer to confirm delivery.</p>
@@ -492,7 +509,8 @@ export default function DealDetails() {
               )}
 
               {deal.status === DEAL_STATUS.IN_ESCROW && isSeller && deliveryConfirmed && (
-                <div className="status-notice notice-success">
+                <div className="status-notice notice-success deal-mascot-status-card">
+                  <DealGuiderMascot variant="processing" size="md" alt="Kofi processing mobile money payout" />
                   <div className="notice-content">
                     <h4>Delivery Confirmed</h4>
                     <p>The buyer has confirmed delivery. Your payout is being sent to your mobile money.</p>
@@ -501,7 +519,8 @@ export default function DealDetails() {
               )}
 
               {deal.status === DEAL_STATUS.DELIVERED && isBuyer && (
-                <div className="status-notice notice-info">
+                <div className="status-notice notice-info deal-mascot-status-card">
+                  <DealGuiderMascot variant="processing" size="md" alt="Kofi processing seller payout" />
                   <div className="notice-content">
                     <h4>Delivery Confirmed</h4>
                     <p>You confirmed delivery. The seller will receive payment shortly.</p>
@@ -510,7 +529,8 @@ export default function DealDetails() {
               )}
 
               {deal.status === DEAL_STATUS.DELIVERED && isSeller && (
-                <div className="status-notice notice-success">
+                <div className="status-notice notice-success deal-mascot-status-card">
+                  <DealGuiderMascot variant="processing" size="md" alt="Kofi sending payout to mobile money" />
                   <div className="notice-content">
                     <h4>Delivery Confirmed</h4>
                     <p>The buyer confirmed delivery. Your payout is on its way to your mobile money.</p>
@@ -519,7 +539,8 @@ export default function DealDetails() {
               )}
 
               {deal.status === DEAL_STATUS.COMPLETED && (
-                <div className="status-notice notice-success">
+                <div className="status-notice notice-success deal-mascot-status-card deal-mascot-status-hero">
+                  <DealGuiderMascot variant="success" size="lg" alt="Kofi celebrating completed deal with a trophy" />
                   <div className="notice-content">
                     <h4>Transaction Completed</h4>
                     <p>All obligations have been fulfilled and the payout has been confirmed.</p>
@@ -528,7 +549,8 @@ export default function DealDetails() {
               )}
 
               {deal.status === DEAL_STATUS.REFUNDED && (
-                <div className="status-notice notice-info">
+                <div className="status-notice notice-info deal-mascot-status-card">
+                  <DealGuiderMascot variant="refunded" size="md" alt="Kofi holding refund confirmation and returned funds" />
                   <div className="notice-content">
                     <h4>Transaction Refunded</h4>
                     <p>Funds have been returned to the buyer according to arbitration or cancellation terms.</p>
@@ -537,7 +559,8 @@ export default function DealDetails() {
               )}
 
               {deal.status === DEAL_STATUS.DISPUTED && (
-                <div className="status-notice notice-danger">
+                <div className="status-notice notice-danger deal-mascot-status-card">
+                  <DealGuiderMascot variant="disputed" size="md" alt="Kofi inspecting dispute records" />
                   <div className="notice-content">
                     <h4>Dispute Active</h4>
                     <p>This transaction is currently under administrative review.</p>
@@ -546,7 +569,8 @@ export default function DealDetails() {
               )}
 
               {deal.status === DEAL_STATUS.CANCELLED && (
-                <div className="status-notice notice-danger">
+                <div className="status-notice notice-danger deal-mascot-status-card">
+                  <DealGuiderMascot variant="cancelled" size="md" alt="Kofi with cancelled deal documentation" />
                   <div className="notice-content">
                     <h4>Deal Cancelled</h4>
                     <p>This transaction has been cancelled. No funds were exchanged.</p>
@@ -582,7 +606,7 @@ export default function DealDetails() {
               </button>
               <DealGuiderMascot
                 variant={statusCelebration.variant}
-                size={statusCelebration.variant === 'success' ? 'lg' : 'md'}
+                size={statusCelebration.variant === 'success' ? 'xl' : 'lg'}
                 alt={statusCelebration.alt}
               />
               <h2 id="deal-status-popup-title">{statusCelebration.title}</h2>

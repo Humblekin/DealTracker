@@ -1,15 +1,12 @@
-const ALLOWED_ORIGINS = [
-  'http://localhost:5173',
-  'http://127.0.0.1:5173',
-  'http://localhost:5174',
-  'http://localhost:4173',
-  'https://dealtracker.vercel.app',
-  'https://dealtracke.netlify.app',
-  'https://dealguider.netlify.app',
-]
+import { getAllowedProdDomains, isAllowedDomain } from './linkguard.ts'
 
 export function corsHeaders(origin: string | null): Record<string, string> {
-  const allowed = ALLOWED_ORIGINS.includes(origin || '') ? origin! : ALLOWED_ORIGINS[0]
+  const prodDomains = getAllowedProdDomains()
+  const defaultOrigin = prodDomains.length > 0
+    ? `https://${prodDomains[0]}`
+    : 'https://dealguider.netlify.app'
+  const allowed = origin && isAllowedDomain(origin) ? origin : defaultOrigin
+
   return {
     'Access-Control-Allow-Origin': allowed,
     'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
@@ -18,6 +15,7 @@ export function corsHeaders(origin: string | null): Record<string, string> {
     // throw "Failed to send a request to the Edge Function".
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, apikey, X-Api-Key, X-Idempotency-Key, X-Client-Info',
     'Access-Control-Max-Age': '86400',
+    'Vary': 'Origin',
     'Content-Type': 'application/json',
   }
 }

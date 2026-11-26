@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { User, Mail, Lock, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { getSafeRedirectPath } from '../utils/navigation';
 import toast from 'react-hot-toast';
 import './Auth.css';
 
@@ -28,7 +29,7 @@ export default function Register() {
     try {
       await signUp({ email: formData.email, password: formData.password, fullName: formData.fullName });
       toast.success('Account created successfully');
-      const redirect = searchParams.get('redirect');
+      const redirect = getSafeRedirectPath(searchParams.get('redirect'));
       if (redirect) navigate(redirect);
       else navigate('/dashboard');
     } catch (err) { console.error(err); toast.error('Registration failed. Please try again.'); }

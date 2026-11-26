@@ -6,6 +6,8 @@
   justify-content: center;
   position: relative;
   flex-shrink: 0;
+  max-width: 100%;
+  aspect-ratio: 1 / 1;
   user-select: none;
   pointer-events: none; /* Decorative mascot shouldn't interfere with clicks */
   transition: transform 0.25s ease-out;
@@ -16,16 +18,30 @@
   height: 100%;
   object-fit: contain;
   display: block;
-  filter: drop-shadow(0 6px 14px rgba(15, 23, 42, 0.08));
+  filter: drop-shadow(0 8px 18px rgba(15, 23, 42, 0.12));
   transition: filter 0.25s ease;
 }
 
-/* Size presets */
-.mascot-size-xs { width: 48px; height: 48px; }
-.mascot-size-sm { width: 72px; height: 72px; }
-.mascot-size-md { width: 120px; height: 120px; }
-.mascot-size-lg { width: 160px; height: 160px; }
-.mascot-size-xl { width: 220px; height: 220px; }
+/* Size presets — expressive desktop scale */
+.mascot-size-xs { width: 64px; height: 64px; }
+.mascot-size-sm { width: 104px; height: 104px; }
+.mascot-size-md { width: 156px; height: 156px; }
+.mascot-size-lg { width: 208px; height: 208px; }
+.mascot-size-xl { width: 256px; height: 256px; }
+
+/* Responsive mobile sizing: bold and legible without overflowing narrow cards */
+@media (max-width: 768px) {
+  .mascot-size-xs { width: 56px; height: 56px; }
+  .mascot-size-sm { width: 96px; height: 96px; }
+  .mascot-size-md { width: 144px; height: 144px; }
+  .mascot-size-lg { width: 188px; height: 188px; }
+  .mascot-size-xl { width: 224px; height: 224px; }
+}
+
+@media (max-width: 380px) {
+  .mascot-size-lg { width: 168px; height: 168px; }
+  .mascot-size-xl { width: 196px; height: 196px; }
+}
 
 /* Subtle Life & Personality Animations */
 .mascot-anim-float {

@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import StatusBadge from '../components/StatusBadge';
+import DealGuiderMascot from '../components/DealGuiderMascot';
 import { formatGHS } from '../utils/fees';
 import { DEAL_STATUS, getCounterpartyRoleLabel } from '../utils/constants';
-import { Check, Lock } from 'lucide-react';
+import { Check, ShieldCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 import './DealDetails.css';
 import './SharedDeal.css';
@@ -16,24 +17,29 @@ export default function SharedDeal() {
   const { shareToken } = useParams();
   const { profile } = useAuth();
   const navigate = useNavigate();
-  const [deal, setDeal] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const location = useLocation();
   const [joining, setJoining] = useState(false);
 
+  // LinkGuard verification guard: require verified payload passed from LinkGuard
+  const verifiedPayload = location.state?.linkguard_verified === true
+    ? location.state?.verification?.deal || null
+    : null;
+  const isVerified = Boolean(verifiedPayload);
+
   useEffect(() => {
-    if (!shareToken) return;
-    supabase.rpc('get_shared_deal', { p_share_token: shareToken })
-      .then(({ data, error }) => {
-        if (error || !data) setError('Deal not found');
-        else setDeal({
-          ...data,
-          buyer_profile: data.buyer_name ? { full_name: data.buyer_name } : null,
-          seller_profile: data.seller_name ? { full_name: data.seller_name } : null,
-        });
-      })
-      .finally(() => setLoading(false));
-  }, [shareToken]);
+    // Redirect any direct or unverified access back through LinkGuard
+    if (!isVerified && shareToken) {
+      navigate(`/deal/${shareToken}`, { replace: true });
+    }
+  }, [shareToken, isVerified, navigate]);
+
+  const deal = verifiedPayload
+    ? {
+      ...verifiedPayload,
+      buyer_profile: verifiedPayload.buyer_name ? { full_name: verifiedPayload.buyer_name } : null,
+      seller_profile: verifiedPayload.seller_name ? { full_name: verifiedPayload.seller_name } : null,
+    }
+    : null;
 
   async function handleJoin() {
     setJoining(true);
@@ -65,11 +71,17 @@ export default function SharedDeal() {
     }
   }
 
-  if (loading) return <div className="loading-screen"><div className="spinner"></div></div>;
+  if (!isVerified) return null;
 
-  if (error) return (
+  if (!deal) return (
     <div className="page-wrapper">
-      <div className="container-md" style={{ textAlign: 'center', paddingTop: '80px' }}>
+      <div className="container-md" style={{ textAlign: 'center', paddingTop: '48px' }}>
+        <DealGuiderMascot
+          variant="invalid-deal"
+          size="xl"
+          alt="Kofi looking puzzled as the deal link could not be found"
+          style={{ margin: '0 auto 16px' }}
+        />
         <h2>Deal Not Found</h2>
         <p>This link may be invalid or the deal has been removed.</p>
         <Link to="/" className="btn btn-primary mt-4">Go Home</Link>
@@ -77,13 +89,9 @@ export default function SharedDeal() {
     </div>
   );
 
-  const counterpartyFilled = deal.creator_role === 'BUYER' ? !!deal.seller_id : !!deal.buyer_id;
-  const isCreator = deal.creator_role === 'BUYER'
-    ? profile?.id === deal.buyer_id
-    : profile?.id === deal.seller_id;
-  const isCounterparty = deal.creator_role === 'BUYER'
-    ? profile?.id === deal.seller_id
-    : profile?.id === deal.buyer_id;
+  const counterpartyFilled = Boolean(deal.counterparty_filled);
+  const isCreator = Boolean(deal.is_creator);
+  const isCounterparty = Boolean(deal.is_counterparty);
   const joinRole = getCounterpartyRoleLabel(deal.creator_role);
 
   return (
@@ -166,7 +174,7 @@ export default function SharedDeal() {
               </div>
             )}
 
-            {isCreator && counterpartyFilled && (
+            {isCreator && counterpartyFilled && deal.id && (
               <Link to={`/deals/${deal.id}`} className="btn btn-primary btn-full">
                 View Deal
               </Link>
@@ -175,8 +183,8 @@ export default function SharedDeal() {
         </div>
 
         <div className="secure-badge">
-          <span className="secure-icon"><Lock size={16} /></span>
-          <span>Protected by DealGuider escrow. Payment is held safely until both parties are satisfied.</span>
+          <span className="secure-icon"><ShieldCheck size={16} /></span>
+          <span>Verified by DealGuider LinkGuard · Escrow-protected transaction</span>
         </div>
       </div>
     </div>

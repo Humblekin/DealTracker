@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams, Navigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
+import { getSafeRedirectPath } from '../utils/navigation';
 import toast from 'react-hot-toast';
 import './Auth.css';
 
@@ -18,7 +19,7 @@ export default function Login() {
   });
 
   if (user) {
-    const redirect = searchParams.get('redirect');
+    const redirect = getSafeRedirectPath(searchParams.get('redirect'));
     return <Navigate to={redirect || (isAdmin ? '/admin' : '/dashboard')} replace />;
   }
 
@@ -32,8 +33,8 @@ export default function Login() {
     try {
       const result = await signIn({ email: formData.email, password: formData.password });
 
-      // Honor the share-link redirect first — role resolution is only needed otherwise.
-      const redirect = searchParams.get('redirect');
+      // Honor the validated share-link redirect first — role resolution is only needed otherwise.
+      const redirect = getSafeRedirectPath(searchParams.get('redirect'));
       if (redirect) {
         navigate(redirect);
         return;

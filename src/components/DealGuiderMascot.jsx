@@ -59,11 +59,11 @@ const MASCOT_VARIANTS = {
 };
 
 const SIZE_MAP = {
-  xs: 48,
-  sm: 72,
-  md: 120,
-  lg: 160,
-  xl: 220,
+  xs: 64,
+  sm: 104,
+  md: 156,
+  lg: 208,
+  xl: 256,
 };
 
 export default function DealGuiderMascot({
@@ -78,14 +78,18 @@ export default function DealGuiderMascot({
   const config = MASCOT_VARIANTS[variant] || MASCOT_VARIANTS['processing'];
   const resolvedAlt = alt !== undefined ? alt : config.defaultAlt;
 
-  const dimension = typeof size === 'number' ? size : SIZE_MAP[size] || 120;
+  const isNumericSize = typeof size === 'number';
+  const dimension = isNumericSize ? size : SIZE_MAP[size] || SIZE_MAP.md;
   const sizeClass = typeof size === 'string' && SIZE_MAP[size] ? `mascot-size-${size}` : '';
   const animClass = animate ? config.animationClass : '';
+  const wrapperStyle = isNumericSize
+    ? { width: dimension, height: dimension, ...style }
+    : style;
 
   return (
     <div
       className={`dealguider-mascot-wrapper ${sizeClass} ${animClass} ${className}`.trim()}
-      style={{ width: dimension, height: dimension, ...style }}
+      style={wrapperStyle}
       {...rest}
     >
       <img

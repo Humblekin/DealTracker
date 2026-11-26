@@ -20,3 +20,7 @@ verify_jwt = false
 
 [functions.merchant-get-transaction]
 verify_jwt = false
+
+# LinkGuard verification — unauthenticated users click deal links
+[functions.verify-link]
+verify_jwt = false

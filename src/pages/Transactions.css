@@ -172,4 +172,8 @@
     grid-template-columns: 1fr;
     gap: 12px;
   }
+
+  .transactions-page .empty-state {
+    padding: 40px 20px;
+  }
 }

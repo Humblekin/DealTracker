@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import DealCard from '../components/DealCard';
+import DealGuiderMascot from '../components/DealGuiderMascot';
 import { DEAL_STATUS, PAYMENT_STATUS } from '../utils/constants';
 import './Transactions.css';
 
@@ -128,11 +129,19 @@ export default function Transactions() {
 
         {filtered.length === 0 ? (
           <div className="empty-state glass-card">
-            <div className="empty-state-icon">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-            </div>
-            <h3>No transactions found</h3>
-            <p>No deals match the selected filters.</p>
+            <DealGuiderMascot
+              variant="empty-transactions"
+              size="xl"
+              alt="Kofi holding a clipboard awaiting transaction records"
+            />
+            <h3 style={{ marginTop: '16px' }}>
+              {deals.length === 0 ? 'No transactions yet' : 'No matching transactions'}
+            </h3>
+            <p>
+              {deals.length === 0
+                ? 'Your completed, active, and pending escrow deals will appear here once you get started.'
+                : 'No deals match the selected status or payment filters.'}
+            </p>
           </div>
         ) : (
           <div className="deals-grid">

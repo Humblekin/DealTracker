@@ -1,49 +1,24 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.106.2'
+import { corsHeaders, handleCors, methodNotAllowed } from '../_shared/cors.ts'
+import { hashShareToken, isValidShareTokenFormat } from '../_shared/linkguard.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-
-const ALLOWED_ORIGINS = [
-  'http://localhost:5173',
-  'http://localhost:5174',
-  'http://localhost:4173',
-  'https://dealtracker.vercel.app',
-  SUPABASE_URL,
-  'http://dealtracke.netlify.app',
-  'https://dealtracke.netlify.app',
-  'https://dealguider.netlify.app',
-]
-
-function corsHeaders(origin: string | null): Record<string, string> {
-  const allowed = ALLOWED_ORIGINS.includes(origin || '') ? origin! : ALLOWED_ORIGINS[0]
-  return {
-    'Access-Control-Allow-Origin': allowed,
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, apikey, X-Api-Key, X-Idempotency-Key, X-Client-Info',
-    'Access-Control-Max-Age': '86400',
-    'Content-Type': 'application/json',
-  }
-}
 
 serve(async (req) => {
   const origin = req.headers.get('Origin')
   const cors = corsHeaders(origin)
 
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers: cors })
-  }
+  const corsRes = handleCors(req)
+  if (corsRes) return corsRes
 
-  if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: cors,
-    })
-  }
+  if (req.method !== 'POST') return methodNotAllowed(req)
 
   try {
     const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
+    const bearer = authHeader?.match(/^Bearer\s+(\S+)$/i)?.[1]
+    if (!bearer) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: cors,
@@ -54,9 +29,7 @@ serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     })
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    )
+    const { data: { user }, error: userError } = await supabase.auth.getUser(bearer)
     if (userError || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
@@ -65,22 +38,38 @@ serve(async (req) => {
     }
 
     const { share_token } = await req.json()
-    if (!share_token) {
-      return new Response(JSON.stringify({ error: 'share_token is required' }), {
+    if (!isValidShareTokenFormat(share_token)) {
+      return new Response(JSON.stringify({ error: 'A valid share_token is required' }), {
         status: 400,
         headers: cors,
       })
     }
 
+    const tokenHash = await hashShareToken(share_token)
     const { data: deal, error: dealError } = await supabase
       .from('deals')
       .select('*')
-      .eq('share_token', share_token)
+      .eq('share_token_hash', tokenHash)
       .single()
 
     if (dealError || !deal) {
       return new Response(JSON.stringify({ error: 'Deal not found' }), {
         status: 404,
+        headers: cors,
+      })
+    }
+
+    if (deal.link_revoked) {
+      return new Response(JSON.stringify({ error: 'This transaction link has been revoked' }), {
+        status: 410,
+        headers: cors,
+      })
+    }
+
+    const nowIso = new Date().toISOString()
+    if (deal.link_expires_at && deal.link_expires_at < nowIso) {
+      return new Response(JSON.stringify({ error: 'This transaction link has expired' }), {
+        status: 410,
         headers: cors,
       })
     }
@@ -110,14 +99,29 @@ serve(async (req) => {
     const updateData = deal.creator_role === 'BUYER'
       ? { seller_id: user.id, status: 'AWAITING_PAYMENT' }
       : { buyer_id: user.id, status: 'AWAITING_PAYMENT' }
+    const roleNullCol = deal.creator_role === 'BUYER' ? 'seller_id' : 'buyer_id'
 
-    const { error: updateError } = await supabase
+    // Atomic state-guarded update prevents concurrent join / revocation / expiration races
+    const { data: updatedDeal, error: updateError } = await supabase
       .from('deals')
       .update(updateData)
       .eq('id', deal.id)
+      .eq('status', 'AWAITING_COUNTERPARTY')
+      .eq('link_revoked', false)
+      .is(roleNullCol, null)
+      .or(`link_expires_at.is.null,link_expires_at.gt.${nowIso}`)
+      .select('id')
+      .maybeSingle()
 
     if (updateError) {
       throw new Error('Failed to join deal')
+    }
+
+    if (!updatedDeal) {
+      return new Response(JSON.stringify({ error: 'This deal is no longer available to join' }), {
+        status: 409,
+        headers: cors,
+      })
     }
 
     await supabase.from('audit_logs').insert({
@@ -143,7 +147,6 @@ serve(async (req) => {
       status: 200,
       headers: cors,
     })
-
   } catch (err) {
     return new Response(JSON.stringify({ error: err instanceof Error ? err.message : 'Internal server error' }), {
       status: 500,

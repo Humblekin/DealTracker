@@ -62,7 +62,7 @@ export default function CreateDeal() {
         <div className="create-deal-layout">
           <div className="glass-card">
             <form onSubmit={handleSubmit} className="deal-form">
-              <div className="form-section">
+              <div className="form-section form-section-role">
                 <h3 className="section-title">I am the...</h3>
                 <div className="role-toggle">
                   <button
@@ -88,7 +88,7 @@ export default function CreateDeal() {
                 </div>
               </div>
 
-              <div className="form-section">
+              <div className="form-section form-section-details">
                 <h3 className="section-title">Contract Details</h3>
                 <div className="form-group">
                   <label className="form-label" htmlFor="deal-title">Transaction Title</label>
@@ -100,7 +100,7 @@ export default function CreateDeal() {
                 </div>
               </div>
 
-              <div className="form-section">
+              <div className="form-section form-section-financials">
                 <h3 className="section-title">Financials</h3>
                 <div className="form-group">
                   <label className="form-label" htmlFor="deal-amount">Principal Amount (GHS)</label>

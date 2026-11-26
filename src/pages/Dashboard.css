@@ -219,4 +219,8 @@
   .deals-grid {
     grid-template-columns: 1fr;
   }
+
+  .dashboard-content .empty-state {
+    padding: 40px 20px;
+  }
 }
